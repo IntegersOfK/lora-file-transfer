@@ -7,6 +7,8 @@ import pathlib
 import argparse
 import time
 import progressbar
+import json
+import sys
 
 # TODO setup the adafruit_rfm9x library
 
@@ -23,12 +25,15 @@ if __name__ == '__main__':
 
 	print(str(args.input) + ' is ' + str(len(all_bytes)/1024)  +' kilobytes and can be sent in ' + str(len(packaged_data)) + ' messages of ' + str(bytes_per_message) + ' bytes each')
 
-	i = 0
 	start_time = time.time()
+	print('Sending metadata about the file we are about to send')
+	metadata = [pathlib.Path(args.input).name, len(all_bytes), len(packaged_data), ] # no json keys (waste of bytes) ...  [filename, total bytes, number of messages to be sent]
+	encoded_metadata = json.dumps(metadata).encode('utf-8')
+	print(metadata)
+	#rfm9x.send_with_ack(encoded_metadata)
+
 	for p in progressbar.progressbar(packaged_data, redirect_stdout=True):
-		i += 1
-		#print('Sending message ' + str(i) + ' of ' + str(len(packaged_data))) # using progressbar instead
-		time.sleep(1) # how long does a message take to send? Let's simulate it taking 1 second, even though it seems like that might be faster than reasonable
+		time.sleep(5) # how long does a message take to send? Let's simulate it taking 5 seconds, even though it seems like that might be faster than reasonable
 		# TODO replace that sleep with actual transmit like rfm9x.send_with_ack(p)
 	print('Done! Transmit took ' + str(int(time.time()-start_time)) + ' seconds')
 
