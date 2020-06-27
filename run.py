@@ -35,7 +35,6 @@ display.show()
 width = display.width
 height = display.height
 
-
 # set the time interval (seconds) for sending packets
 transmit_interval = 10
 
@@ -76,6 +75,8 @@ listen = False
 incoming_dest = None
 outgoing_file = None
 
+fernet = None # where we encrypt/decrypt the strings if a password was provided
+
 def update_display(text):
     display.fill(0)
     display.text(text, width - 85, height - 7, 1)
@@ -108,7 +109,7 @@ def decrease():
             send_or_rec = 'recieve'
         update_display("This node is configured to: {0} press button 3 to start".format(send_or_rec.upper())))
 
-def increase():
+def increase(fernet=None):
     """Third button. Changes the destination or node number to up one"""
     if selection_mode == valid_modes[0]:
         if rfm9x.destination < 255:
@@ -129,12 +130,16 @@ def increase():
         else:
             update_display("Send mode, sending requested file...")
             listen = False
-            send()
+            send(fernet)
  
 
-def send():
+def send(fernet=None):
     all_bytes = pathlib.Path(outgoing_file_path).read_bytes() # get the file as bytes
     filehash = hashlib.sha256(all_bytes).hexdigest()[:10] # we can reasonably assume the first 10 characters are good enough to know it's the right file
+    if fernet:
+        print("Encrypting bytes string, size before encryption " + str(len(all_bytes))
+        all_bytes = fernet.encrypt(all_bytes)
+        print("Size after encryption " + str(len(all_bytes))
     packaged_data = [all_bytes[i:i+bytes_per_message] for i in range(0, len(all_bytes), bytes_per_message)] # turn it into the right number of messages
 
     print(str(outgoing_file_path) + ' is ' + str(len(all_bytes)/1024)  +' kilobytes and can be sent in ' + str(len(packaged_data)) + ' messages of ' + str(bytes_per_message) + ' bytes each')
@@ -163,6 +168,7 @@ class Receiver():
     total_messages = None
     filehash = None
     output_dir = None
+    fernet = None
 
     def __init__(self, output_dir):
         self.output_dir = output_dir
@@ -170,6 +176,9 @@ class Receiver():
     def combine_pieces(self):
         """Puts together all the pieces in the list"""
         all_bytes = ''.join(self.collected)
+        if self.fernet:
+            all_bytes = f.decrypt(all_bytes)
+            print("Decrypted data with provided password")
         filehash = hashlib.sha256(all_bytes).hexdigest()[:10]
         if filehash == self.filehash:
             print("File hash matches, file integrity confirmed!")
@@ -234,25 +243,38 @@ def main(r):
         if not btnB.value:
             decrease()
         if not btnC.value:
-            increase()
+            increase(r.fernet) # button 3 can trigger the sending, so they might need fernet to encrypt with the given password
 
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', '--incoming', help='the directory where incoming files should be written in receiving mode, defaults to current working directory', default=os.getcwd())
     parser.add_argument('-o', '--outgoing', help='the path to the file you want to send if in sending mode')
-    #parser.add_argument('-k', '--key', help='provide an 8-byte string to encrypt the content before sending (must be used on the receiving end too)')
+    parser.add_argument('-p', '--password', help='a string to encrypt the file contents - but metadata is not encrypted, which means the filename and number of messages to transfer can be known by anyone watching!')
     args = parser.parse_args()
 
-    #if args.key:
-    #    rfm69.encryption_key = (args.key) # TODO does this need padding if too short? DOES THIS EVEN WORK? https://github.com/adafruit/Adafruit_CircuitPython_RFM9x/blob/master/examples/rfm9x_simpletest.py
-    #    print("Encryption key set. This key must be used on the recieving end, and packets are now limited to 60 bytes each.")
-    #    bytes_per_message = 60 # with encryption key we can only 60 bytes
+    r = Receiver(args.incoming)
+    
+    if args.password:
+        import base64
+        from cryptography.fernet import Fernet
+        from cryptography.hazmat.backends import default_backend
+        from cryptography.hazmat.primitives import hashes
+        from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+        # we don't actually save the password anywhere so I don't see why we need a salt... let's just derrive one from the password
+        salt = bytes('{:<16}'.format(args.password[:16]), "utf-8")
+        kdf = PBKDF2HMAC(algorithm=hashes.SHA256(),
+                         length=32,
+                         salt=salt,
+                         iterations=100000,
+                         backend=default_backend())
+        key = base64.urlsafe_b64encode(kdf.derive(bytes(args.password, 'utf-8')))
+        r.fernet = Fernet(key)
+        print("Password encryption enabled")
 
     if args.outgoing:
         outgoing_file = args.outgoing
 
-    r = Receiver(args.incoming)
     # start main loop to check for messages and button presses
     main(r)
 
