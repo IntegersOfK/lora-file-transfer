@@ -88,7 +88,7 @@ class BonnetInteract():
     selection_mode = valid_modes[0]
     rfm9x = None
 
-    def __init(self, rfm9x, display, fernet=None):
+    def __init__(self, rfm9x, display, fernet=None):
         self.rfm9x = rfm9x
         self.display = display
         self.fernet = fernet
