@@ -7,6 +7,9 @@ import argparse
 import pathlib
 import textwrap
 import time
+import hashlib
+import json
+import  progressbar
 
 # Import the SSD1306 module.
 import adafruit_ssd1306
@@ -76,8 +79,8 @@ valid_modes = ['data destination node id', 'this node id', 'toggle send or recie
 selection_mode = valid_modes[0]
 send_or_rec = ['recieve', 'send']
 listen = False
-incoming_dest = None
-outgoing_file = None
+#incoming_dest = None
+#outgoing_file = None
 
 fernet = None # where we encrypt/decrypt the strings if a password was provided
 
@@ -265,7 +268,8 @@ def main(r):
                 increase(r.fernet) # button 3 can trigger the sending, so they might need fernet to encrypt with the given password
 
 if __name__ == '__main__':
-
+    global outgoing_file
+    global incoming_dest
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', '--incoming', help='the directory where incoming files should be written in receiving mode, defaults to current working directory', default=os.getcwd())
     parser.add_argument('-o', '--outgoing', help='the path to the file you want to send if in sending mode')
@@ -292,7 +296,8 @@ if __name__ == '__main__':
         print("Password encryption enabled")
 
     if args.outgoing:
-        outgoing_file = args.outgoing
+        outgoing_file_path = args.outgoing
+    incoming_dest = args.incoming
 
     # start main loop to check for messages and button presses
     main(r)
