@@ -74,104 +74,105 @@ rfm9x.enable_crc = True
 #rfm9x.ack_wait(5.0) # increase the acknowledgement wait to 5 seconds from 0.5)
 #rfm9x.receive_timeout(5.0) # increase the recieve timeout to 5 seconds.. might not be needed and could cause issues for button detection?
 
-bytes_per_message = 252 # this is the max number of bytes the adafruit_rfm9x library is able to send in a message over LoRa
-valid_modes = ['data destination node id', 'this node id', 'toggle send or recieve']
-selection_mode = valid_modes[0]
-send_or_rec = ['recieve', 'send']
-listen = False
 #incoming_dest = None
 #outgoing_file = None
 
 fernet = None # where we encrypt/decrypt the strings if a password was provided
+class BonnetInteract():
+    listen = False
+    bytes_per_message = 252 # this is the max number of bytes the adafruit_rfm9x library is able to send in a message over LoRa
+    fernet = None
+    display = None
+    send_or_rec = ['recieve', 'send']
+    valid_modes = ['data destination node id', 'this node id', 'toggle send or recieve']
+    selection_mode = valid_modes[0]
+    rfm9x = None
 
-def update_display(text):
-    display.fill(0)
-    display.text(textwrap.fill(text, 20), 0,0, 1)
-    display.show()
+    def __init(self, rfm9x, display, fernet=None):
+        self.rfm9x = rfm9x
+        self.display = display
+        self.fernet = fernet
 
-def cycle_selection_mode():
-    """First button. Changes the selection mode"""
-    global selection_mode
-    selection_mode = valid_modes[(valid_modes.index(selection_mode)+1)%len(valid_modes)]
-    update_display(selection_mode)
+    def update_display(self, text):
+        self.display.fill(0)
+        self.display.text(textwrap.fill(text, 20), 0,0, 1)
+        self.display.show()
 
-def decrease():
-    """Second button. Changes the destination or node number to down one"""
-    global selection_mode
-    global listen
-    global send_or_rec
-    if selection_mode == valid_modes[0]:
-        if rfm9x.destination > 0:
-            rfm9x.destination -= 1
-        else:
-            rfm9x.destination = 255
-        update_display("Broadcast destination is node: {0}".format(rfm9x.destination))
-    elif selection_mode == valid_modes[1]:
-        if rfm9x.node > 0:
-            rfm9x.node -= 1
-        else:
-            rfm9x.node = 255
-        update_display("This node id is set to: {0}".format(rfm9x.node))
-    elif selection_mode == valid_modes[2]:
-        listen = False
-        if send_or_rec == 'receive':
-            send_or_rec = 'send'
-        else:
-            send_or_rec = 'receive'
-            listen = True
-        update_display("This node is configured to: {0} press button 3 to start".format(send_or_rec.upper()))
+    def cycle_selection_mode(self):
+        """First button. Changes the selection mode"""
+        self.selection_mode = self.valid_modes[(self.valid_modes.index(self.selection_mode)+1)%len(self.valid_modes)]
+        self.update_display(self.selection_mode)
 
-def increase(fernet=None):
-    """Third button. Changes the destination or node number to up one"""
-    global selection_mode
-    global listen
-    global send_or_rec
-    if selection_mode == valid_modes[0]:
-        if rfm9x.destination < 255:
-            rfm9x.destination += 1
-        else:
-            rfm9x.destination = 0
-        update_display("Broadcast destination is node: {0}".format(rfm9x.destination))
-    elif selection_mode == valid_modes[1]:
-        if rfm9x.node < 255:
-            rfm9x.node += 1
-        else:
-            rfm9x.node = 0
-        update_display("This node id is set to: {0}".format(rfm9x.node))
-    elif selection_mode == valid_modes[2]:
-        if send_or_rec == 'receive':
-            update_display("Receive mode listening for messages...")
-            listen = True
-        else:
-            update_display("Send mode, sending requested file...")
-            listen = False
-            send(fernet)
- 
+    def decrease(self):
+        """Second button. Changes the destination or node number to down one"""
+        if self.selection_mode == self.valid_modes[0]:
+            if self.rfm9x.destination > 0:
+                self.rfm9x.destination -= 1
+            else:
+                self.rfm9x.destination = 255
+            self.update_display("Broadcast destination is node: {0}".format(self.rfm9x.destination))
+        elif self.selection_mode == self.valid_modes[1]:
+            if self.rfm9x.node > 0:
+                self.rfm9x.node -= 1
+            else:
+                self.rfm9x.node = 255
+            self.update_display("This node id is set to: {0}".format(self.rfm9x.node))
+        elif self.selection_mode == self.valid_modes[2]:
+            self.listen = False
+            if self.send_or_rec == 'receive':
+                self.send_or_rec = 'send'
+            else:
+                self.send_or_rec = 'receive'
+                self.listen = True
+            self.update_display("This node is configured to: {0} press button 3 to start".format(self.send_or_rec.upper()))
 
-def send(fernet=None):
-    all_bytes = pathlib.Path(outgoing_file_path).read_bytes() # get the file as bytes
-    filehash = hashlib.sha256(all_bytes).hexdigest()[:10] # we can reasonably assume the first 10 characters are good enough to know it's the right file
-    if fernet:
-        print("Encrypting bytes string, size before encryption " + str(len(all_bytes)))
-        all_bytes = fernet.encrypt(all_bytes)
-        print("Size after encryption " + str(len(all_bytes)))
-    packaged_data = [all_bytes[i:i+bytes_per_message] for i in range(0, len(all_bytes), bytes_per_message)] # turn it into the right number of messages
+    def increase(self, fernet=None):
+        """Third button. Changes the destination or node number to up one"""
+        if self.selection_mode == self.valid_modes[0]:
+            if self.rfm9x.destination < 255:
+                self.rfm9x.destination += 1
+            else:
+                self.rfm9x.destination = 0
+            self.update_display("Broadcast destination is node: {0}".format(self.rfm9x.destination))
+        elif self.selection_mode == self.valid_modes[1]:
+            if self.rfm9x.node < 255:
+                self.rfm9x.node += 1
+            else:
+                self.rfm9x.node = 0
+            self.update_display("This node id is set to: {0}".format(rfm9x.node))
+        elif self.selection_mode == self.valid_modes[2]:
+            if self.send_or_rec == 'receive':
+                self.update_display("Receive mode listening for messages...")
+                self.listen = True
+            else:
+                self.update_display("Send mode, sending requested file...")
+                self.listen = False
+                self.send()
+    
+    def send(self):
+        all_bytes = pathlib.Path(self.outgoing_file_path).read_bytes() # get the file as bytes
+        filehash = hashlib.sha256(all_bytes).hexdigest()[:10] # we can reasonably assume the first 10 characters are good enough to know it's the right file
+        if self.fernet:
+            print("Encrypting bytes string, size before encryption " + str(len(all_bytes)))
+            all_bytes = self.fernet.encrypt(all_bytes)
+            print("Size after encryption " + str(len(all_bytes)))
+        packaged_data = [all_bytes[i:i+self.bytes_per_message] for i in range(0, len(all_bytes), self.bytes_per_message)] # turn it into the right number of messages
 
-    print(str(outgoing_file_path) + ' is ' + str(len(all_bytes)/1024)  +' kilobytes and can be sent in ' + str(len(packaged_data)) + ' messages of ' + str(bytes_per_message) + ' bytes each')
+        print(str(self.outgoing_file_path) + ' is ' + str(len(all_bytes)/1024)  +' kilobytes and can be sent in ' + str(len(packaged_data)) + ' messages of ' + str(self.bytes_per_message) + ' bytes each')
 
-    start_time = time.time()
-    print('Sending metadata about the file we are about to send')
-    metadata = [0, pathlib.Path(outgoing_file_path).name, len(packaged_data), filehash] # status 0 to start, filename, number of messages to be sent, hash
-    encoded_metadata = json.dumps(metadata).encode('utf-8')
-    print(metadata)
-    rfm9x.send_with_ack(encoded_metadata)
+        start_time = time.time()
+        print('Sending metadata about the file we are about to send')
+        metadata = [0, pathlib.Path(self.outgoing_file_path).name, len(packaged_data), filehash] # status 0 to start, filename, number of messages to be sent, hash
+        print(metadata)
+        encoded_metadata = bytearray(json.dumps(metadata), 'utf-8')
+        print(encoded_metadata)
+        self.rfm9x.send_with_ack(encoded_metadata)
 
-    for p in progressbar.progressbar(packaged_data, redirect_stdout=True):
-        rfm9x.send_with_ack(p)
+        for p in progressbar.progressbar(packaged_data, redirect_stdout=True):
+            self.rfm9x.send_with_ack(bytearray(p, 'utf-8'))
+        self.rfm9x.send_with_ack(bytearray(json.dumps([1, filehash]), 'utf-8')) # confirm all the pieces were sent, status 1 to end
 
-    rfm9x.send_with_ack(json.dumps([1, filehash]).encode('utf-8')) # confirm all the pieces were sent, status 1 to end
-
-    print('Done! Transmit took ' + str(int(time.time()-start_time)) + ' seconds')
+        print('Done! Transmit took ' + str(int(time.time()-start_time)) + ' seconds')
 
 
 class Receiver():
@@ -212,8 +213,9 @@ class Receiver():
     def process_message(self, packet):
         """Deals with the collection of packets and to stick them pack together"""
         # Check if there's metadata
+        print(packet)
         decoded = packet.decode('utf-8')
-        decoded = '['+decoded
+        print(decoded)
         try:
             a = json.loads(decoded)
             print(a)
@@ -239,9 +241,8 @@ class Receiver():
             message_count += 1
             print("Recieving packet " + str(self.message_count) + " of " +  str(len(self.total_messages)))
             update_display("Recieving packet " + str(self.message_count) + " of " +  str(len(self.total_messages)))
-    
 
-def main(r):
+def main(b):
     last_press = time.time()
     button_debounce = 0.200 # time until another press can be registered
     while True:
@@ -252,24 +253,22 @@ def main(r):
             if packet is not None:
                 # Received a packet!
                 # Print out the raw bytes of the packet:
-                print("Received (raw header):", [hex(x) for x in packet[0:4]])
-                print("Received (raw payload): {0}".format(packet[4:]))
-                print("Received RSSI: {0}".format(rfm9x.last_rssi))
-                update_display("Recieving packet!")
-                r.process_message(packet[3:])
+                #print("Received (raw header):", [hex(x) for x in packet[0:4]])
+                #print("Received (raw payload): {0}".format(packet[4:]))
+                #print("Received RSSI: {0}".format(rfm9x.last_rssi))
+                b.update_display("Recieving packet! Time: " + str(last_press))
+                r.process_message(packet)
         if last_press < time.time()-button_debounce:
             last_press = time.time()
             if not btnA.value:
                 last_press = int(time.time())
-                cycle_selection_mode()
+                b.cycle_selection_mode()
             if not btnB.value:
-                decrease()
+                b.decrease()
             if not btnC.value:
-                increase(r.fernet) # button 3 can trigger the sending, so they might need fernet to encrypt with the given password
+                b.increase() # button 3 can trigger the sending, so they might need fernet to encrypt with the given password
 
 if __name__ == '__main__':
-    global outgoing_file
-    global incoming_dest
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', '--incoming', help='the directory where incoming files should be written in receiving mode, defaults to current working directory', default=os.getcwd())
     parser.add_argument('-o', '--outgoing', help='the path to the file you want to send if in sending mode')
@@ -295,11 +294,11 @@ if __name__ == '__main__':
         r.fernet = Fernet(key)
         print("Password encryption enabled")
 
+    b = BonnetInteract(rfm9x, display, r.fernet)
     if args.outgoing:
-        outgoing_file_path = args.outgoing
-    incoming_dest = args.incoming
+        b.outgoing_file_path = args.outgoing
 
     # start main loop to check for messages and button presses
-    main(r)
+    main(b)
 
 
