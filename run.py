@@ -73,7 +73,6 @@ rfm9x.enable_crc = True
 
 bytes_per_message = 252 # this is the max number of bytes the adafruit_rfm9x library is able to send in a message over LoRa
 valid_modes = ['data destination node id', 'this node id', 'toggle send or recieve']
-global selection_mode
 selection_mode = valid_modes[0]
 send_or_rec = ['recieve', 'send']
 listen = False
@@ -84,7 +83,7 @@ fernet = None # where we encrypt/decrypt the strings if a password was provided
 
 def update_display(text):
     display.fill(0)
-    display.text(textwrap.fill(text, 24), 0,0, 1)
+    display.text(textwrap.fill(text, 20), 0,0, 1)
     display.show()
 
 def cycle_selection_mode():
@@ -95,12 +94,15 @@ def cycle_selection_mode():
 
 def decrease():
     """Second button. Changes the destination or node number to down one"""
+    global selection_mode
+    global listen
+    global send_or_rec
     if selection_mode == valid_modes[0]:
         if rfm9x.destination > 0:
             rfm9x.destination -= 1
         else:
             rfm9x.destination = 255
-        update_display("Broadcast destination is node: {0}".format(rfm9x.node))
+        update_display("Broadcast destination is node: {0}".format(rfm9x.destination))
     elif selection_mode == valid_modes[1]:
         if rfm9x.node > 0:
             rfm9x.node -= 1
@@ -117,6 +119,9 @@ def decrease():
 
 def increase(fernet=None):
     """Third button. Changes the destination or node number to up one"""
+    global selection_mode
+    global listen
+    global send_or_rec
     if selection_mode == valid_modes[0]:
         if rfm9x.destination < 255:
             rfm9x.destination += 1
@@ -231,7 +236,7 @@ class Receiver():
 
 def main(r):
     last_press = time.time()
-    button_debounce = 0.300 # time until another press can be registered
+    button_debounce = 0.200 # time until another press can be registered
     while True:
         if send_or_rec == 'recieve' and listen:
             # Look for a new packet: only accept if addresses to my_node
