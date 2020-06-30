@@ -156,7 +156,7 @@ class BonnetInteract():
             print("Encrypting bytes string, size before encryption " + str(len(all_bytes)))
             all_bytes = self.fernet.encrypt(all_bytes)
             print("Size after encryption " + str(len(all_bytes)))
-        packaged_data = [all_bytes[i:i+self.bytes_per_message] for i in range(0, len(all_bytes), self.bytes_per_message)] # turn it into the right number of messages
+        packaged_data = [bytearray(all_bytes[i:i+self.bytes_per_message]) for i in range(0, len(all_bytes), self.bytes_per_message)] # turn it into the right number of messages
 
         print(str(self.outgoing_file_path) + ' is ' + str(len(all_bytes)/1024)  +' kilobytes and can be sent in ' + str(len(packaged_data)) + ' messages of ' + str(self.bytes_per_message) + ' bytes each')
 
@@ -171,6 +171,7 @@ class BonnetInteract():
         for p in progressbar.progressbar(packaged_data, redirect_stdout=True):
             print("Waiting 5 seconds")
             time.sleep(5)
+            print(p)
             self.rfm9x.send_with_ack(p)
         self.rfm9x.send_with_ack(bytearray(json.dumps([1, filehash]), 'utf-8')) # confirm all the pieces were sent, status 1 to end
 
@@ -250,7 +251,7 @@ def main(b):
     while True:
         if True:
             # Look for a new packet: only accept if addresses to my_node
-            packet = rfm9x.receive(keep_listening=True, with_header=False, with_ack=False, timeout=5)
+            packet = rfm9x.receive(keep_listening=True, with_header=False, with_ack=False, timeout=0.3)
             # If no packet was received during the timeout then None is returned.
             if packet is not None:
                 # Received a packet!
