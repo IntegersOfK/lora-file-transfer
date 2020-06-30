@@ -169,6 +169,8 @@ class BonnetInteract():
         self.rfm9x.send_with_ack(encoded_metadata)
 
         for p in progressbar.progressbar(packaged_data, redirect_stdout=True):
+            print("Waiting 5 seconds")
+            time.sleep(5)
             self.rfm9x.send_with_ack(p)
         self.rfm9x.send_with_ack(bytearray(json.dumps([1, filehash]), 'utf-8')) # confirm all the pieces were sent, status 1 to end
 
@@ -177,7 +179,7 @@ class BonnetInteract():
 
 class Receiver():
 
-    message_count = None
+    message_count = 0
     collected = []  # where we store the messages until we have all pieces
     filename = None
     total_size = None
@@ -206,7 +208,7 @@ class Receiver():
             f.write(all_bytes)
 
         # reset everything
-        self.message_count = None
+        self.message_count = 0
         self.collected = []
         self.filename = None
         self.total_messages = None
@@ -215,12 +217,10 @@ class Receiver():
     def process_message(self, packet):
         """Deals with the collection of packets and to stick them pack together"""
         # Check if there's metadata
-        print(packet)
         decoded = packet.decode('utf-8')
         print(decoded)
         try:
             a = json.loads(decoded)
-            print(a)
             if len(a):
                 status = int(a[0])
                 if status == 0:
@@ -228,7 +228,7 @@ class Receiver():
                     self.total_messages = a[2]
                     self.filehash = a[3]
                     print("Recieved metadata about a new file to receive.")
-                    self.update_display("File incoming... " + self.filename)
+                    self.b.update_display("File incoming... " + self.filename)
                     self.message_count = 0
                     collected = []
                 if status == 1:
@@ -237,12 +237,12 @@ class Receiver():
                     self.combine_pieces()
         except Exception:
             if not self.filehash:
-                print("Packet was received but no metadata was received")
+                print("Packet was received but no metadata was received earlier, ignoring")
                 self.b.update_display("Got packet, but no metadata")
                 return
-            if self.message_count: self.message_count += 1
-            print("Recieving packet " + str(self.message_count) + " of " +  str(len(self.total_messages)))
-            self.b.update_display("Recieving packet " + str(self.message_count) + " of " +  str(len(self.total_messages)))
+            self.message_count += 1
+            print("Recieving packet " + str(self.message_count) + " of " +  str(self.total_messages))
+            self.b.update_display("Recieving packet " + str(self.message_count) + " of " +  str(self.total_messages))
 
 def main(b):
     last_press = time.time()
@@ -250,16 +250,18 @@ def main(b):
     while True:
         if True:
             # Look for a new packet: only accept if addresses to my_node
-            packet = rfm9x.receive(with_ack=True)
+            packet = rfm9x.receive(keep_listening=True, with_header=False, with_ack=False, timeout=5)
             # If no packet was received during the timeout then None is returned.
             if packet is not None:
                 # Received a packet!
                 # Print out the raw bytes of the packet:
-                #print("Received (raw header):", [hex(x) for x in packet[0:4]])
-                #print("Received (raw payload): {0}".format(packet[4:]))
-                #print("Received RSSI: {0}".format(rfm9x.last_rssi))
-                b.update_display("Recieving packet! Time: " + str(last_press))
+#                print("Received (raw header):", [hex(x) for x in packet[0:4]])
+                print("Received (raw packet): {0}".format(packet))
+                print("Received RSSI: {0}".format(rfm9x.last_rssi))
+                b.update_display("Recieving packet! Time: " + str(time.time()))
+                print("Receiving packet! Time: " + str(time.time()))
                 r.process_message(packet)
+                packet = None
         if last_press < time.time()-button_debounce:
             last_press = time.time()
             if not btnA.value:
