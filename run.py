@@ -114,7 +114,8 @@ def decrease():
         if send_or_rec == 'receive':
             send_or_rec = 'send'
         else:
-            send_or_rec = 'recieve'
+            send_or_rec = 'receive'
+            listen = True
         update_display("This node is configured to: {0} press button 3 to start".format(send_or_rec.upper()))
 
 def increase(fernet=None):
