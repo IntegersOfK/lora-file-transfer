@@ -77,7 +77,7 @@ rfm9x.enable_crc = True
 class BonnetInteract():
     listen = False
     #bytes_per_message = 252 # this is the max number of bytes the adafruit_rfm9x library is able to send in a message over LoRa
-    bytes_per_message = 100
+    bytes_per_message = 200
     fernet = None
     display = None
     send_or_rec = ['recieve', 'send']
@@ -166,7 +166,6 @@ class BonnetInteract():
         self.rfm9x.send_with_ack(encoded_metadata)
 
         for p in progressbar.progressbar(packaged_data, redirect_stdout=True):
-            print("Waiting 5 seconds")
             print(p)
             self.rfm9x.send_with_ack(p)
         self.rfm9x.send_with_ack(bytearray(json.dumps([1, filehash]), 'utf-8')) # confirm all the pieces were sent, status 1 to end
@@ -201,7 +200,7 @@ class Receiver():
             print("File hash matches, file integrity confirmed!")
         else:
             print("File hash doesn't match, writing to file anyway...")
-        with open(os.path.join(self.output_dir, filename), "wb") as f:
+        with open(os.path.join(self.output_dir, self.filename), "wb") as f:
             f.write(all_bytes)
 
         # reset everything
@@ -232,8 +231,7 @@ class Receiver():
                     print("Recieved all messages to recreate the file")
                     self.b.update_display("File done recieving! " + self.filename)
                     self.combine_pieces()
-        except Exception as e:
-            print(e)
+        except Exception as e: # for cases when it's not metadata...
             if not self.filehash:
                 print("Packet was received but no metadata was received earlier, ignoring")
                 self.b.update_display("Got packet, but no metadata")
