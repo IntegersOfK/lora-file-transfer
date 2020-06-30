@@ -77,7 +77,7 @@ rfm9x.enable_crc = True
 class BonnetInteract():
     listen = False
     #bytes_per_message = 252 # this is the max number of bytes the adafruit_rfm9x library is able to send in a message over LoRa
-    bytes_per_message = 200
+    bytes_per_message = 100
     fernet = None
     display = None
     send_or_rec = ['recieve', 'send']
@@ -202,6 +202,7 @@ class Receiver():
             print("File hash doesn't match, writing to file anyway...")
         with open(os.path.join(self.output_dir, self.filename), "wb") as f:
             f.write(all_bytes)
+        print("Done, got the file! " + os.path.join(self.output_dir, self.filename))
 
         # reset everything
         self.message_count = 0
