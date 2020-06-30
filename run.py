@@ -42,8 +42,8 @@ display.show()
 width = display.width
 height = display.height
 
-# set the time interval (seconds) for sending packets
-transmit_interval = 10
+# set the min time interval (in seconds) to wait between sending packets
+min_transmit_interval = 0
 
 # Define radio parameters.
 RADIO_FREQ_MHZ = 915.0  # Frequency of the radio in Mhz. Must match your
@@ -167,6 +167,7 @@ class BonnetInteract():
 
         for p in progressbar.progressbar(packaged_data, redirect_stdout=True):
             print(p)
+            if min_transmit_interval: time.sleep(min_transmit_interval)
             self.rfm9x.send_with_ack(p)
         self.rfm9x.send_with_ack(bytearray(json.dumps([1, filehash]), 'utf-8')) # confirm all the pieces were sent, status 1 to end
 
