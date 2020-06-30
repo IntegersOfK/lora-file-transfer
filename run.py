@@ -3,6 +3,10 @@ import os
 import board
 import busio
 import digitalio
+import argparse
+import pathlib
+import textwrap
+import time
 
 # Import the SSD1306 module.
 import adafruit_ssd1306
@@ -64,11 +68,12 @@ display.show()
 # enable CRC checking
 rfm9x.enable_crc = True
 
-rfm9x.ack_wait(5.0) # increase the acknowledgement wait to 5 seconds from 0.5)
+#rfm9x.ack_wait(5.0) # increase the acknowledgement wait to 5 seconds from 0.5)
 #rfm9x.receive_timeout(5.0) # increase the recieve timeout to 5 seconds.. might not be needed and could cause issues for button detection?
 
 bytes_per_message = 252 # this is the max number of bytes the adafruit_rfm9x library is able to send in a message over LoRa
 valid_modes = ['data destination node id', 'this node id', 'toggle send or recieve']
+global selection_mode
 selection_mode = valid_modes[0]
 send_or_rec = ['recieve', 'send']
 listen = False
@@ -79,11 +84,12 @@ fernet = None # where we encrypt/decrypt the strings if a password was provided
 
 def update_display(text):
     display.fill(0)
-    display.text(text, width - 85, height - 7, 1)
+    display.text(textwrap.fill(text, 24), 0,0, 1)
     display.show()
 
 def cycle_selection_mode():
     """First button. Changes the selection mode"""
+    global selection_mode
     selection_mode = valid_modes[(valid_modes.index(selection_mode)+1)%len(valid_modes)]
     update_display(selection_mode)
 
@@ -94,20 +100,20 @@ def decrease():
             rfm9x.destination -= 1
         else:
             rfm9x.destination = 255
-        update_display("Broadcast destination is node: {0}".format(rfm9x.node)))
+        update_display("Broadcast destination is node: {0}".format(rfm9x.node))
     elif selection_mode == valid_modes[1]:
         if rfm9x.node > 0:
             rfm9x.node -= 1
         else:
             rfm9x.node = 255
-        update_display("This node id is set to: {0}".format(rfm9x.node)))
+        update_display("This node id is set to: {0}".format(rfm9x.node))
     elif selection_mode == valid_modes[2]:
         listen = False
-        if send_or_rec == 'receive:
+        if send_or_rec == 'receive':
             send_or_rec = 'send'
         else:
             send_or_rec = 'recieve'
-        update_display("This node is configured to: {0} press button 3 to start".format(send_or_rec.upper())))
+        update_display("This node is configured to: {0} press button 3 to start".format(send_or_rec.upper()))
 
 def increase(fernet=None):
     """Third button. Changes the destination or node number to up one"""
@@ -116,15 +122,15 @@ def increase(fernet=None):
             rfm9x.destination += 1
         else:
             rfm9x.destination = 0
-        update_display("Broadcast destination is node: {0}".format(rfm9x.node)))
+        update_display("Broadcast destination is node: {0}".format(rfm9x.destination))
     elif selection_mode == valid_modes[1]:
         if rfm9x.node < 255:
             rfm9x.node += 1
         else:
             rfm9x.node = 0
-        update_display("This node id is set to: {0}".format(rfm9x.node)))
+        update_display("This node id is set to: {0}".format(rfm9x.node))
     elif selection_mode == valid_modes[2]:
-        if send_or_rec == 'receive:
+        if send_or_rec == 'receive':
             update_display("Receive mode listening for messages...")
             listen = True
         else:
@@ -137,9 +143,9 @@ def send(fernet=None):
     all_bytes = pathlib.Path(outgoing_file_path).read_bytes() # get the file as bytes
     filehash = hashlib.sha256(all_bytes).hexdigest()[:10] # we can reasonably assume the first 10 characters are good enough to know it's the right file
     if fernet:
-        print("Encrypting bytes string, size before encryption " + str(len(all_bytes))
+        print("Encrypting bytes string, size before encryption " + str(len(all_bytes)))
         all_bytes = fernet.encrypt(all_bytes)
-        print("Size after encryption " + str(len(all_bytes))
+        print("Size after encryption " + str(len(all_bytes)))
     packaged_data = [all_bytes[i:i+bytes_per_message] for i in range(0, len(all_bytes), bytes_per_message)] # turn it into the right number of messages
 
     print(str(outgoing_file_path) + ' is ' + str(len(all_bytes)/1024)  +' kilobytes and can be sent in ' + str(len(packaged_data)) + ' messages of ' + str(bytes_per_message) + ' bytes each')
@@ -152,9 +158,9 @@ def send(fernet=None):
     rfm9x.send_with_ack(encoded_metadata)
 
     for p in progressbar.progressbar(packaged_data, redirect_stdout=True):
-	rfm9x.send_with_ack(p)
+        rfm9x.send_with_ack(p)
 
-    rfm9x.send_with_ack([1, filehash) # confirm all the pieces were sent, status 1 to end
+    rfm9x.send_with_ack(json.dumps([1, filehash]).encode('utf-8')) # confirm all the pieces were sent, status 1 to end
 
     print('Done! Transmit took ' + str(int(time.time()-start_time)) + ' seconds')
 
@@ -224,8 +230,10 @@ class Receiver():
     
 
 def main(r):
+    last_press = time.time()
+    button_debounce = 0.300 # time until another press can be registered
     while True:
-        if send_rec_toggle == 'recieve' and listen:
+        if send_or_rec == 'recieve' and listen:
             # Look for a new packet: only accept if addresses to my_node
             packet = rfm9x.receive(with_ack=True, with_header=True)
             # If no packet was received during the timeout then None is returned.
@@ -237,13 +245,15 @@ def main(r):
                 print("Received RSSI: {0}".format(rfm9x.last_rssi))
                 update_display("Recieving packet!")
                 r.process_message(packet)
-
-        if not btnA.value:
-            cycle_selection_mode()
-        if not btnB.value:
-            decrease()
-        if not btnC.value:
-            increase(r.fernet) # button 3 can trigger the sending, so they might need fernet to encrypt with the given password
+        if last_press < time.time()-button_debounce:
+            last_press = time.time()
+            if not btnA.value:
+                last_press = int(time.time())
+                cycle_selection_mode()
+            if not btnB.value:
+                decrease()
+            if not btnC.value:
+                increase(r.fernet) # button 3 can trigger the sending, so they might need fernet to encrypt with the given password
 
 if __name__ == '__main__':
 
