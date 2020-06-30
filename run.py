@@ -169,7 +169,7 @@ class BonnetInteract():
         self.rfm9x.send_with_ack(encoded_metadata)
 
         for p in progressbar.progressbar(packaged_data, redirect_stdout=True):
-            self.rfm9x.send_with_ack(bytearray(p, 'utf-8'))
+            self.rfm9x.send_with_ack(p)
         self.rfm9x.send_with_ack(bytearray(json.dumps([1, filehash]), 'utf-8')) # confirm all the pieces were sent, status 1 to end
 
         print('Done! Transmit took ' + str(int(time.time()-start_time)) + ' seconds')
@@ -185,9 +185,11 @@ class Receiver():
     filehash = None
     output_dir = None
     fernet = None
+    b = None
 
-    def __init__(self, output_dir):
+    def __init__(self, output_dir, bon):
         self.output_dir = output_dir
+        self.b = bon
 
     def combine_pieces(self):
         """Puts together all the pieces in the list"""
@@ -226,21 +228,21 @@ class Receiver():
                     self.total_messages = a[2]
                     self.filehash = a[3]
                     print("Recieved metadata about a new file to receive.")
-                    update_display("File incoming... " + self.filename)
+                    self.update_display("File incoming... " + self.filename)
                     self.message_count = 0
                     collected = []
                 if status == 1:
                     print("Recieved all messages to recreate the file")
-                    update_display("File done recieving! " + self.filename)
+                    self.b.update_display("File done recieving! " + self.filename)
                     self.combine_pieces()
         except Exception:
             if not self.filehash:
                 print("Packet was received but no metadata was received")
-                update_display("Got packet, but no metadata")
+                self.b.update_display("Got packet, but no metadata")
                 return
-            message_count += 1
+            if self.message_count: self.message_count += 1
             print("Recieving packet " + str(self.message_count) + " of " +  str(len(self.total_messages)))
-            update_display("Recieving packet " + str(self.message_count) + " of " +  str(len(self.total_messages)))
+            self.b.update_display("Recieving packet " + str(self.message_count) + " of " +  str(len(self.total_messages)))
 
 def main(b):
     last_press = time.time()
@@ -275,8 +277,7 @@ if __name__ == '__main__':
     parser.add_argument('-p', '--password', help='a string to encrypt the file contents - but metadata is not encrypted, which means the filename and number of messages to transfer can be known by anyone watching!')
     args = parser.parse_args()
 
-    r = Receiver(args.incoming)
-    
+    fernet = None
     if args.password:
         import base64
         from cryptography.fernet import Fernet
@@ -291,10 +292,11 @@ if __name__ == '__main__':
                          iterations=100000,
                          backend=default_backend())
         key = base64.urlsafe_b64encode(kdf.derive(bytes(args.password, 'utf-8')))
-        r.fernet = Fernet(key)
+        fernet = Fernet(key)
         print("Password encryption enabled")
 
-    b = BonnetInteract(rfm9x, display, r.fernet)
+    b = BonnetInteract(rfm9x, display, fernet)
+    r = Receiver(args.incoming, b)
     if args.outgoing:
         b.outgoing_file_path = args.outgoing
 
