@@ -192,7 +192,7 @@ class Receiver():
 
     def combine_pieces(self):
         """Puts together all the pieces in the list"""
-        all_bytes = ''.join(self.collected)
+        all_bytes = b''.join(self.collected)
         if self.fernet:
             all_bytes = f.decrypt(all_bytes)
             print("Decrypted data with provided password")
@@ -214,9 +214,9 @@ class Receiver():
     def process_message(self, packet):
         """Deals with the collection of packets and to stick them pack together"""
         # Check if there's metadata
-        decoded = packet.decode('utf-8')
-        print(decoded)
         try:
+            decoded = packet.decode('utf-8')
+            print(decoded)
             a = json.loads(decoded)
             if len(a):
                 status = int(a[0])
@@ -238,6 +238,7 @@ class Receiver():
                 self.b.update_display("Got packet, but no metadata")
                 return
             self.message_count += 1
+            self.collected.append(bytes(packet))
             print("Recieving packet " + str(self.message_count) + " of " +  str(self.total_messages))
             self.b.update_display("Recieving packet " + str(self.message_count) + " of " +  str(self.total_messages))
 
