@@ -232,7 +232,8 @@ class Receiver():
                     print("Recieved all messages to recreate the file")
                     self.b.update_display("File done recieving! " + self.filename)
                     self.combine_pieces()
-        except Exception:
+        except UnicodeDecodeError, Exception as e:
+            print(e)
             if not self.filehash:
                 print("Packet was received but no metadata was received earlier, ignoring")
                 self.b.update_display("Got packet, but no metadata")
