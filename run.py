@@ -74,13 +74,10 @@ rfm9x.enable_crc = True
 #rfm9x.ack_wait(5.0) # increase the acknowledgement wait to 5 seconds from 0.5)
 #rfm9x.receive_timeout(5.0) # increase the recieve timeout to 5 seconds.. might not be needed and could cause issues for button detection?
 
-#incoming_dest = None
-#outgoing_file = None
-
-fernet = None # where we encrypt/decrypt the strings if a password was provided
 class BonnetInteract():
     listen = False
-    bytes_per_message = 252 # this is the max number of bytes the adafruit_rfm9x library is able to send in a message over LoRa
+    #bytes_per_message = 252 # this is the max number of bytes the adafruit_rfm9x library is able to send in a message over LoRa
+    bytes_per_message = 100
     fernet = None
     display = None
     send_or_rec = ['recieve', 'send']
@@ -170,7 +167,6 @@ class BonnetInteract():
 
         for p in progressbar.progressbar(packaged_data, redirect_stdout=True):
             print("Waiting 5 seconds")
-            time.sleep(5)
             print(p)
             self.rfm9x.send_with_ack(p)
         self.rfm9x.send_with_ack(bytearray(json.dumps([1, filehash]), 'utf-8')) # confirm all the pieces were sent, status 1 to end
@@ -251,7 +247,7 @@ def main(b):
     while True:
         if True:
             # Look for a new packet: only accept if addresses to my_node
-            packet = rfm9x.receive(keep_listening=True, with_header=False, with_ack=False, timeout=0.3)
+            packet = rfm9x.receive(keep_listening=True, with_header=False, with_ack=True, timeout=0.3)
             # If no packet was received during the timeout then None is returned.
             if packet is not None:
                 # Received a packet!
