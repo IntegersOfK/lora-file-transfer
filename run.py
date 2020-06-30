@@ -209,8 +209,11 @@ class Receiver():
     def process_message(self, packet):
         """Deals with the collection of packets and to stick them pack together"""
         # Check if there's metadata
+        decoded = packet.decode('utf-8')
+        decoded = '['+decoded
         try:
-            a = json.loads(packet)
+            a = json.loads(decoded)
+            print(a)
             if len(a):
                 status = int(a[0])
                 if status == 0:
@@ -239,9 +242,9 @@ def main(r):
     last_press = time.time()
     button_debounce = 0.200 # time until another press can be registered
     while True:
-        if send_or_rec == 'recieve' and listen:
+        if True:
             # Look for a new packet: only accept if addresses to my_node
-            packet = rfm9x.receive(with_ack=True, with_header=True)
+            packet = rfm9x.receive(with_ack=True)
             # If no packet was received during the timeout then None is returned.
             if packet is not None:
                 # Received a packet!
@@ -250,7 +253,7 @@ def main(r):
                 print("Received (raw payload): {0}".format(packet[4:]))
                 print("Received RSSI: {0}".format(rfm9x.last_rssi))
                 update_display("Recieving packet!")
-                r.process_message(packet)
+                r.process_message(packet[3:])
         if last_press < time.time()-button_debounce:
             last_press = time.time()
             if not btnA.value:
