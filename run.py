@@ -76,20 +76,23 @@ class Transceiver():
         elif self.selection_mode == self.valid_modes[2]:
             if self.send_or_rec == 'receive':
                 self.update_display("Receive mode listening for messages...")
+                print("Requesting remaining pieces for the file")
+                self.request_pieces()
             else:
                 self.update_display("Send mode, sending requested file...")
                 #self.send()
                 print("Sending request for file")
-                self.request_pieces()
+                for missing_piece in range(1, self.collected['4a5afe']['length']):
+                    self.request_pieces('4a5afe', missing_piece)
 
         elif self.selection_mode == self.valid_modes[3]:
             print("Doing a filelist availability update")
             self.update_display("Sending request to recieve a list of files...")
             rfm9x.send(bytearray([0,0,0,0]) + '000000'.encode('utf-8') + json.dumps({'a':'ls'}, separators=(',', ':'), indent=None).encode('utf-8'))
 
-    def request_pieces(self, filehash=None, part=None):
+    def request_pieces(self, filehash=None, part=0):
         print("Sending request for all pieces...")
-        rfm9x.send(bytearray([0,0,0,0]) + '4a5afe'.encode('utf-8') + json.dumps({'a':'a', 'p':0}).encode('utf-8'))
+        rfm9x.send(bytearray([0,0,0,0]) + filehash.encode('utf-8') + json.dumps({'a':'a', 'p':part}).encode('utf-8'))
 
     def send_pieces(self, filehash, part=0):
         """Sends piece(s) of the requested file"""
