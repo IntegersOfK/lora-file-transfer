@@ -82,7 +82,7 @@ class Transceiver():
         elif self.selection_mode == self.valid_modes[3]:
             print("Doing a filelist availability update")
             self.update_display("Sending request to recieve a list of files...")
-            rfm9x.send(bytearray([0,0,0,0]) + '000000'.encode('utf-8') + json.dumps({'a':'ls'}).encode('utf-8'))
+            rfm9x.send(bytearray([0,0,0,0]) + '000000'.encode('utf-8') + json.dumps({'a':'ls'}, separators=(',', ':'), indent=None).encode('utf-8'))
 
 
     def request_file_metadata(self):
@@ -131,7 +131,8 @@ class Transceiver():
                     print("Encrypting bytes string, size before encryption " + str(len(all_bytes)))
                     all_bytes = self.fernet.encrypt(all_bytes)
                     print("Size after encryption " + str(len(all_bytes)))
-                self.packaged_data[filehash] = {'fh':fullhash}
+                self.packaged_data[filehash] = {'h':filehash} # already have it as the key, but we can put it for ease here
+                self.packaged_data[filehash] = {'fh':fullhash} # in case we want to do a full integrity check
 #                print(fullhash)
 #                print(all_bytes)
 #                self.packaged_data[filehash]['data'] = [123]
@@ -174,7 +175,7 @@ class Transceiver():
                 print("A list of files available was requested...")
                 # TODO add pagination?
                 # for now, return list of hashes and their filenames
-                filelist = json.dumps({'a':'fl', 'ls': [{'fh':f, 'n':self.packaged_data[f]['n'], 'l':len(self.packaged_data[f]['data'])} for f in self.packaged_data]})
+                filelist = json.dumps({'a':'fl', 'ls': [{'h':f, 'n':self.packaged_data[f]['n'], 'l':len(self.packaged_data[f]['data'])} for f in self.packaged_data]}, separators=(',', ':'), indent=None)
                 print(filelist)
                 self.rfm9x.send(bytearray([0,0,0,0]) + bytearray([0,0,0,0,0,0]) + filelist.encode('utf-8'))
             
@@ -183,7 +184,7 @@ class Transceiver():
                 print("The available files are:")
                 print(d.get('ls'))
                 for k in d.get('ls', []):
-                    self.collected[k] = {'filename':k.get('n'), 'length':k.get('l'), 'fullhash':k.get('fh'), 'data':{}}
+                    self.collected[k.get('h')[:6]] = {'filename':k.get('n'), 'length':k.get('l'), 'hash':k.get('h'), 'data':{}}
                 print(self.collected)
 
             if d.get('a') == 'a':
