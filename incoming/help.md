@@ -1,0 +1,1 @@
+A default folder where incoming files will be saved if not specified.

@@ -185,7 +185,7 @@ class Transceiver():
             if filehash in self.collected.keys():
                 print("A filepiece was detected as part " + str(pid)  + " for file " +  filehash)
                 self.collected[filehash]['data'][pid] = data
-                print( self.collected[filehash]['filename'] + " with filehash " + filehash + " is now " + str(len(self.collected[filehash]['data'][pid])) + " messages long")
+                print( self.collected[filehash]['filename'] + " with filehash " + filehash + " is now " + str(len(self.collected[filehash]['data'].keys())) + " messages long")
                 if len(self.collected[filehash]['data']) == self.collected[filehash]['length']:
                     print("Got all pieces! Combining...")
                     self.combine_pieces()
@@ -224,8 +224,8 @@ def main(b, btnA, btnB, btnC):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('-i', '--incoming', help='the directory where incoming files should be written in receiving mode, defaults to current working directory', default=os.getcwd())
-    parser.add_argument('-o', '--outgoing', help='the path to the file you want to send if in sending mode')
+    parser.add_argument('-i', '--incoming', help='the directory where incoming files should be written in receiving mode, defaults to current working directory', default=os.path.join(os.getcwd(), 'incoming'))
+    parser.add_argument('-o', '--outgoing', help='the path to the file you want to send if in sending mode', default=os.path.join(os.getcwd(), 'outgoing'))
     parser.add_argument('-p', '--password', help='a string to encrypt the file contents - but metadata is not encrypted, which means the filename and number of messages to transfer can be known by anyone watching!')
     args = parser.parse_args()
 
