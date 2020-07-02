@@ -123,18 +123,23 @@ class Transceiver():
     def _parse_available_files(self):
         """Chunk/parse any files we might be requested to send in preperation"""
         for f in os.listdir(self.outgoing_directory):
-            all_bytes = pathlib.Path(os.path.join(self.outgoing_directory, f)).read_bytes() # get the file as bytes
-            # we can reasonably assume the first 6 characters are good enough to know it's the right file. Sure, small chance of collision but it will be used in every message so it needs to be short!
-            fullhash = hashlib.sha256(all_bytes).hexdigest()
-            filehash = fullhash[:6]
-            if self.fernet:
-                print("Encrypting bytes string, size before encryption " + str(len(all_bytes)))
-                all_bytes = self.fernet.encrypt(all_bytes)
-                print("Size after encryption " + str(len(all_bytes)))
-            self.packaged_data[filehash] = {'h':fullhash}
-            self.packaged_data[filehash]['data'] = [bytearray(all_bytes[i:i+self.bytes_per_message], 'utf-8') for i in range(0, len(all_bytes), self.bytes_per_message)] # turn it into the right number of messages
-            self.packaged_data[filehash]['n'] = f
-            print(f + ' is ' + str(len(all_bytes)/1024)  +' kilobytes and can be sent in ' + str(len(packaged_data[filename]['data'])) + ' messages of ' + str(self.bytes_per_message) + ' bytes each')
+            fpath = pathlib.Path(os.path.join(self.outgoing_directory, f))
+            if fpath.is_file():
+                all_bytes = fpath.read_bytes() # get the file as bytes
+                # we can reasonably assume the first 6 characters are good enough to know it's the right file. Sure, small chance of collision but it will be used in every message so it needs to be short!
+                fullhash = hashlib.sha256(all_bytes).hexdigest()
+                filehash = fullhash[:6]
+                if self.fernet:
+                    print("Encrypting bytes string, size before encryption " + str(len(all_bytes)))
+                    all_bytes = self.fernet.encrypt(all_bytes)
+                    print("Size after encryption " + str(len(all_bytes)))
+                self.packaged_data[filehash] = {'h':fullhash}
+#                print(fullhash)
+#                print(all_bytes)
+#                self.packaged_data[filehash]['data'] = [123]
+                self.packaged_data[filehash]['data'] = [all_bytes[i:i+self.bytes_per_message] for i in range(0, len(all_bytes), self.bytes_per_message)] # turn it into the right number of messages
+                self.packaged_data[filehash]['n'] = f
+                print(f + ' with shorthash ' + filehash  + ' is ' + str(len(all_bytes)/1024)  +' kilobytes and can be sent in ' + str(len(self.packaged_data[filehash]['data'])) + ' messages of ' + str(self.bytes_per_message) + ' bytes each')
 
             # start_time = time.time()
             # print('Sending metadata about the file we are about to send')

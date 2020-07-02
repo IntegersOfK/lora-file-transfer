@@ -61,7 +61,7 @@ def setup_bonnet():
     display.show()
 
     # enable CRC checking
-    rfm9x.enable_crc = True
+#    rfm9x.enable_crc = True
     return rfm9x, display, [btnA, btnB, btnC]
 
     #rfm9x.ack_wait(5.0) # increase the acknowledgement wait to 5 seconds from 0.5)
