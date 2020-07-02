@@ -129,12 +129,12 @@ class Transceiver():
 
     
     # These are the codes we use in the first 4 bytes to know what we want
-    CODES = {'-200'}, # request a list of file hashes
-            '-201': {'h':None}}, # request a file's metadata
-            '-202', {'h':None}} # request all parts of a file
-            '-203', {'h':None, 'p':0}, # request specific part of a file
-            '-301' # make and forward command functions (with pieces?)
-            }                   
+    # CODES = {'-200'}, # request a list of file hashes
+    #         '-201': {'h':None}}, # request a file's metadata
+    #         '-202', {'h':None}} # request all parts of a file
+    #         '-203', {'h':None, 'p':0}, # request specific part of a file
+    #         '-301' # make and forward command functions (with pieces?)
+    #         }                   
                                 
 
     def process_message(self, packet):
