@@ -97,7 +97,7 @@ class Transceiver():
         else:
             # send the specific part requested
             print("Sending " + filehash + " " + str(part) + " of " + str(len(self.packaged_data[filehash]['data'])))
-            self.rfm9x.send_with_ack(bytes(str(part).zfill(4), 'utf-8') + bytes(filehash, 'utf-8') + self.packaged_data[filehash]['data'][int(part)]) # filehash is the delimiter between metadata and filedata.
+            self.rfm9x.send_with_ack(bytes(str(part).zfill(4), 'utf-8') + bytes(filehash, 'utf-8') + self.packaged_data[filehash]['data'][int(part)-1]) # filehash is the delimiter between metadata and filedata.
     
     def combine_pieces(self, filehash):
         """Puts together all the pieces in the list"""
@@ -173,19 +173,25 @@ class Transceiver():
                 print("A list of files available was requested...")
                 # TODO add pagination?
                 # for now, return list of hashes and their filenames
-                filelist = json.dumps({'a':'fl', 'ls': [f + self.packaged_data[f]['n'] for f in self.packaged_data]})
+                filelist = json.dumps({'a':'fl', 'ls': [{'h':f, 'n':self.packaged_data[f]['n'], 'l':len(self.packaged_data[f]['data'])} for f in self.packaged_data]})
                 print(filelist)
                 self.rfm9x.send(bytearray([0,0,0,0]) + filelist.encode('utf-8'))
             if d.get('a') == 'fl':
                 print("A list of files was recieved! ")
                 print("The available files are:")
                 print(d.get('ls'))
+                for k in d.get('ls', []):
+                    self.collected[k] = {'filename':k.get('n'), 'length':k.get('l'), 'filehash':k.get('h'), 'data':{}}
+                print(self.collected)
+
             if d.get('a') == 'a':
                 print("One or more pieces of a specific file were requested...")
                 self.send_pieces(filehash.decode(), d.get('p', 0))
         else:
-            if filehash in self.packaged_data.keys():
+            if filehash in self.collected.keys():
                 print("A filepiece was detected as part " + str(pid)  + " for file " +  filehash)
+                self.collected[filehash]['data'][pid] = data
+                print(filehash + " is now " + str(len(self.collected[filehash]['data'][pid])) + " messages long")
                 
             else:
                 print("A message was detected but it doesn't appear to be for us. Skipping...")
