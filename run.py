@@ -91,7 +91,7 @@ class Transceiver():
             rfm9x.send(bytearray([0,0,0,0]) + '000000'.encode('utf-8') + json.dumps({'a':'ls'}, separators=(',', ':'), indent=None).encode('utf-8'))
 
     def request_pieces(self, filehash=None, part=0):
-        print("Sending request for all pieces...")
+        print("Sending request for piece " + str(part))
         rfm9x.send(bytearray([0,0,0,0]) + filehash.encode('utf-8') + json.dumps({'a':'a', 'p':part}).encode('utf-8'))
 
     def send_pieces(self, filehash, part=0):
