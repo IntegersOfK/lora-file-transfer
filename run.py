@@ -82,7 +82,7 @@ class Transceiver():
                 self.update_display("Send mode, sending requested file...")
                 #self.send()
                 print("Sending request for file")
-                for missing_piece in [r for r in range(1, self.collected['4a5afe']['length'] if not self.self.collected['4a5afe']['data'].get(r)):
+                for missing_piece in [r for r in range(1, self.collected['4a5afe']['length'] if not self.self.collected['4a5afe']['data'].get(r))]:
                     self.request_pieces('4a5afe', missing_piece)
 
         elif self.selection_mode == self.valid_modes[3]:
