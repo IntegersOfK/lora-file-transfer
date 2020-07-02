@@ -255,7 +255,7 @@ if __name__ == '__main__':
         fernet = Fernet(key)
         print("Password encryption enabled")
 
-    rfm9x, display = setupbon.setupbon()
+    rfm9x, display = setupbon.setup_bonnet()
     # start main loop to check for messages and button presses
     main(Transceiver(rfm9x, display, args.incoming, args.outgoing, fernet))
 
