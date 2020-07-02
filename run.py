@@ -97,7 +97,7 @@ class Transceiver():
         else:
             # send the specific part requested
             print("Sending " + filehash + " " + str(part) + " of " + str(len(self.packaged_data[filehash]['data'])))
-            self.rfm9x.send_with_ack(bytes(str(part).zfill(4), 'utf-8') + bytes(filehash, 'utf-8') + self.packaged_data[filehash][int(part)]) # filehash is the delimiter between metadata and filedata.
+            self.rfm9x.send_with_ack(bytes(str(part).zfill(4), 'utf-8') + bytes(filehash, 'utf-8') + self.packaged_data[filehash]['data'][int(part)]) # filehash is the delimiter between metadata and filedata.
     
     def combine_pieces(self, filehash):
         """Puts together all the pieces in the list"""
@@ -113,15 +113,7 @@ class Transceiver():
         with open(os.path.join(self.output_dir, self.collected[filehash]['filename']), "wb") as f:
             f.write(all_bytes)
         print("Done, got the file! " + os.path.join(self.output_dir, self.collected[filehash]['filename']))
-
-    
-    # These are the codes we use in the first 4 bytes to know what we want
-    # CODES = {'-200'}, # request a list of file hashes
-    #         '-201': {'h':None}}, # request a file's metadata
-    #         '-202', {'h':None}} # request all parts of a file
-    #         '-203', {'h':None, 'p':0}, # request specific part of a file
-    #         '-301' # make and forward command functions (with pieces?)
-    #         }                   
+       
     def _parse_available_files(self):
         """Chunk/parse any files we might be requested to send in preperation"""
         for f in os.listdir(self.outgoing_directory):
@@ -198,71 +190,6 @@ class Transceiver():
             else:
                 print("A message was detected but it doesn't appear to be for us. Skipping...")
 
-                
-
-            # if d == '1':
-            #     print("The entire file " + filehash + " has been requested. Sending now...")
-            #     send_pieces(filehash)
-                
-            
-            
-
-
-
-
-        #print(piece)
-        # if not self.collected.get(filehash):
-        #     print("A file we have not seen before! " + filehash)
-        #     self.collected[filehash] = {'meta':{}, 'messages':{}}
-
-        # if piece == b'-200':
-        #     print("A specific piece of a file is being requested")
-        #     self.collected[filehash]['filename']
-        #     a = json.loads(data.decode('utf-8'))
-
-        # elif piece == b'-101':
-        #     print("Meta information is being requested about the file to send!")
-        #     self.rfm9x.send_with_ack(bytes(str(index).zfill(4)) + bytes(filehash, 'utf-8') + self.packaged_data[filehash][part]) # hash is the delimiter
-
-        # elif piece == b'-102':
-        #     print("Meta information is arriving about the file we want!")
-        #     self.collected[filehash]['filename'] = a[0]
-        #     a = json.loads(data.decode('utf-8'))
-
-
-        # elif piece.isdigit():
-        #     print("A piece of a file is being requested")
-        #     self.rfm9x.send_with_ack(bytes(str(index).zfill(4)) + bytes(filehash, 'utf-8') + self.packaged_data[filehash][part]) # hash is the delimiter
-        #     self.collected[filehash]['messages'][int(piece)] = data
-
-        
-        # try:
-        #     decoded = packet.decode('utf-8')
-        #     print(decoded)
-        #     a = json.loads(decoded)
-        #     if len(a):
-        #         status = int(a[0])
-        #         if status == 0:
-        #             self.filename = a[1]
-        #             self.total_messages = a[2]
-        #             self.filehash = a[3]
-        #             print("Recieved metadata about a new file to receive.")
-        #             self.b.update_display("File incoming... " + self.filename)
-        #             self.message_count = 0
-                    
-        #         if status == 1:
-        #             print("Recieved all messages to recreate the file")
-        #             self.b.update_display("File done recieving! " + self.filename)
-        #             self.combine_pieces()
-        # except Exception as e: # for cases when it's not metadata...
-        #     if not self.filehash:
-        #         print("Packet was received but no metadata was received earlier, ignoring")
-        #         self.b.update_display("Got packet, but no metadata")
-        #         return
-        #     self.message_count += 1
-        #     self.collected.append(bytes(packet))
-        #     print("Recieving packet " + str(self.message_count) + " of " +  str(self.total_messages))
-        #     self.b.update_display("Recieving packet " + str(self.message_count) + " of " +  str(self.total_messages))
 
 def main(b, btnA, btnB, btnC):
     last_press = time.time()
