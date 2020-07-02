@@ -82,7 +82,7 @@ class Transceiver():
                 self.update_display("Send mode, sending requested file...")
                 #self.send()
                 print("Sending request for file")
-                for missing_piece in range(1, self.collected['4a5afe']['length']):
+                for missing_piece in [r for r in range(1, self.collected['4a5afe']['length'] if not self.self.collected['4a5afe']['data'].get(r)):
                     self.request_pieces('4a5afe', missing_piece)
 
         elif self.selection_mode == self.valid_modes[3]:
@@ -110,8 +110,9 @@ class Transceiver():
     
     def _combine_pieces(self, filehash):
         """Puts together all the pieces in the list"""
-        print(self.collected[filehash])
-        all_bytes = b''.join(self.collected[filehash]['data'])
+        all_bytes = b''
+        for r in range(0,len(self.collected[filehash]['data'])):
+            all_bytes += self.collected[filehash]['data'][r]
         if self.fernet:
             all_bytes = f.decrypt(all_bytes)
             print("Decrypted data with provided password")
