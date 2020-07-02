@@ -110,7 +110,7 @@ class Transceiver():
     
     def combine_pieces(self, filehash):
         """Puts together all the pieces in the list"""
-        all_bytes = b''.join(self.collected[filehash])
+        all_bytes = b''.join(self.collected[filehash]['data'])
         if self.fernet:
             all_bytes = f.decrypt(all_bytes)
             print("Decrypted data with provided password")
@@ -191,7 +191,7 @@ class Transceiver():
                 print( self.collected[filehash]['filename'] + " with filehash " + filehash + " is now " + str(len(self.collected[filehash]['data'].keys())) + " messages long")
                 if len(self.collected[filehash]['data']) == self.collected[filehash]['length']:
                     print("Got all pieces! Combining...")
-                    self.combine_pieces()
+                    self.combine_pieces(filehash)
             else:
                 print("A message was detected but it doesn't appear to be for us. Skipping...")
 
