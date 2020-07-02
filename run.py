@@ -145,15 +145,23 @@ class Transceiver():
         # check if request for metafdaa
 
         # We use the first 10 bytes in the packet The first 4 are piece numbers, and the next 6 are hash
-        pieceid = packet[:4]
-        filehash = packet[4:10]
+        pieceid = packet[:4] # This comes in as a byte array, so put them together as an int
+        pid = int(pieceid[0])*1000
+        pid += int(pieceid[1])*100
+        pid += int(pieceid[2])*10
+        pid += int(pieceid[3])
+        filehash = packet[4:10] # next 6 are filehash
         data = packet[10:]
         print("pieceid:")
-        print(pieceid)
+        print(pid)
         print("filehash")
         print(filehash)
         print('data')
         print(data)
+
+        if pid == 0:
+            print("Some sort of meta was requested, interpreting data as dict")
+            print(json.loads(data.decode('utf-8')))
 
         #print(piece)
         # if not self.collected.get(filehash):
