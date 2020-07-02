@@ -77,7 +77,7 @@ class Transceiver():
             if self.send_or_rec == 'receive':
                 self.update_display("Receive mode listening for messages...")
                 print("Requesting remaining pieces for the file")
-                self.request_pieces()
+                self.request_pieces('4a5afe')
             else:
                 self.update_display("Send mode, sending requested file...")
                 #self.send()
