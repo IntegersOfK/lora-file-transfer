@@ -145,9 +145,16 @@ class Transceiver():
         # check if request for metafdaa
 
         # We use the first 10 bytes in the packet The first 4 are piece numbers, and the next 6 are hash
-        piece = packet[:4]
+        pieceid = packet[:4]
         filehash = packet[4:10]
         data = packet[10:]
+        print("pieceid:")
+        print(pieceid)
+        print("filehash")
+        print(filehash)
+        print('data')
+        print(data)
+
         #print(piece)
         # if not self.collected.get(filehash):
         #     print("A file we have not seen before! " + filehash)
