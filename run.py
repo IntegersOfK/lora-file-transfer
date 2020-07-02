@@ -85,20 +85,20 @@ class Transceiver():
         """When somebody sends a message requesting a file"""
         pass
 
-    def send_pieces(self, filehash, part):
+    def send_pieces(self, filehash, part=0):
         """Sends piece(s) of the requested file"""
         #if self.min_transmit_interval: time.sleep(self.min_transmit_interval)
-        if part.isdigit():
-            if part == 0:
-                # send all parts
-                for r in range(0,len(self.packaged_data[filehash]['data'])):
-                    #self.rfm9x.send_with_ack(bytes(str(index).zfill(4)) + bytes(filehash, 'utf-8') + p) # filehash is the 
-                    self.send_pieces(filehash, r)
-            else:
-                # send the specific part requested
-                print("Sending " + filehash + " " + str(part) + " of " + str(len(self.packaged_data[filehash]['data'])))
-                self.rfm9x.send_with_ack(bytes(str(part).zfill(4)) + bytes(filehash, 'utf-8') + self.packaged_data[filehash][int(part)]) # filehash is the delimiter between metadata and filedata.
         
+        if part == 0:
+            # send all parts
+            for r in range(0,len(self.packaged_data[filehash]['data'])):
+                #self.rfm9x.send_with_ack(bytes(str(index).zfill(4)) + bytes(filehash, 'utf-8') + p) # filehash is the 
+                self.send_pieces(filehash, r)
+        else:
+            # send the specific part requested
+            print("Sending " + filehash + " " + str(part) + " of " + str(len(self.packaged_data[filehash]['data'])))
+            self.rfm9x.send_with_ack(bytes(str(part).zfill(4), 'utf-8') + bytes(filehash, 'utf-8') + self.packaged_data[filehash][int(part)]) # filehash is the delimiter between metadata and filedata.
+    
     def combine_pieces(self, filehash):
         """Puts together all the pieces in the list"""
         all_bytes = b''.join(self.collected[filehash])
@@ -190,7 +190,7 @@ class Transceiver():
                 print(d.get('ls'))
             if d.get('a') == 'a':
                 print("One or more pieces of a specific file were requested...")
-                self.send_pieces(filehash, d.get('p', 0))
+                self.send_pieces(filehash.decode(), d.get('p', 0))
         else:
             if filehash in self.packaged_data.keys():
                 print("A filepiece was detected as part " + str(pid)  + " for file " +  filehash)
