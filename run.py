@@ -149,7 +149,7 @@ class Transceiver():
         pid += int(pieceid[1])*100
         pid += int(pieceid[2])*10
         pid += int(pieceid[3])
-        filehash = packet[4:10] # next 6 are filehash
+        filehash = packet[4:10].decode() # next 6 are filehash
         data = packet[10:]
         print("pieceid:")
         print(pid)
@@ -180,7 +180,7 @@ class Transceiver():
 
             if d.get('a') == 'a':
                 print("One or more pieces of a specific file were requested...")
-                self.send_pieces(filehash.decode(), d.get('p', 0)) # if there is a specific piece value of p, we will only send that
+                self.send_pieces(filehash, d.get('p', 0)) # if there is a specific piece value of p, we will only send that
         else:
             if filehash in self.collected.keys():
                 print("A filepiece was detected as part " + str(pid)  + " for file " +  filehash)
@@ -194,10 +194,11 @@ class Transceiver():
 
 
 def main(b, btnA, btnB, btnC):
+    b.send_or_rec = 'receive'
     last_press = time.time()
     button_debounce = 0.300 # time until another press can be registered
     while True:
-        if b.send_or_rec == 'receive':
+        if True: #b.send_or_rec == 'receive':
             # Look for a new packet: only accept if addresses to my_node
             packet = b.rfm9x.receive(keep_listening=True, with_header=False, with_ack=True, timeout=0.3)
             # If no packet was received during the timeout then None is returned.
