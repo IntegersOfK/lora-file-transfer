@@ -92,10 +92,11 @@ class Transceiver():
             index = 0
             for p in self.packaged_data[filehash]['messages']:
                  #if self.min_transmit_interval: time.sleep(self.min_transmit_interval)
-                self.rfm9x.send_with_ack(bytes(str(index).zfill(4)) + bytes(filehash, 'utf-8') + p) # hash is the delimiter between metadata and filedata.
+                index += 1
+                self.rfm9x.send_with_ack(bytes(str(index).zfill(4)) + bytes(filehash, 'utf-8') + p) # filehash is the delimiter between metadata and filedata.
         else:
             # send the specific part requested
-            self.rfm9x.send_with_ack(bytes(str(index).zfill(4)) + bytes(filehash, 'utf-8') + self.packaged_data[filehash][part]) # hash is the delimiter
+            self.rfm9x.send_with_ack(bytes(str(index).zfill(4)) + bytes(filehash, 'utf-8') + self.packaged_data[filehash][part]) # filehash is the delimiter
         
     def combine_pieces(self, filehash):
         """Puts together all the pieces in the list"""
@@ -172,20 +173,29 @@ class Transceiver():
         print(data)
 
         if pid == 0:
-            print("A pieceid of 0 was found, which means this is metadata and can be interpreted as json dict")
+            print("A pieceid of 0 was found, which means if it's from us, this is metadata and can be interpreted as json dict")
             d = json.loads(data.decode('utf-8'))
             # d, first element, has a key for what to do
-            if d.get('a') == 'list':
+            if d.get('a') == 'ls':
                 print("A list of files available was requested...")
                 # TODO add pagination?
                 # for now, return list of hashes and their filenames
-                filelist = json.dumps({'a':'fl', 'f': [f + self.packaged_data[f]['n'] for f in self.packaged_data]})
-                self.rfm9x.send(bytearray(0,0,0,0) + filelist.encoded())
+                filelist = json.dumps({'a':'fl', 'ls': [f + self.packaged_data[f]['n'] for f in self.packaged_data]})
+                print(filelist)
+                self.rfm9x.send(bytearray([0,0,0,0]) + filelist.encode('utf-8'))
             if d.get('a') == 'fl':
                 print("A list of files was recieved! ")
-                # TODO add pagination?
                 print("The available files are:")
-                print(d.get('f'))
+                print(d.get('ls'))
+            if d.get('a') == 'a':
+                print("One or more pieces of a specific file were requested...")
+                send_pieces(filehash, d.get('p', 0))
+        else:
+            if filehash in self.packaged_data.keys():
+                print("A filepiece was detected as part " + str(pid)  + " for file " +  filehash)
+                
+            else:
+                print("A message was detected but it doesn't appear to be for us. Skipping...")
 
                 
 
