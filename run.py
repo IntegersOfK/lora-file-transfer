@@ -13,12 +13,12 @@ import setupbon # offload all the bonnet-specific settings
 class Transceiver():
     #bytes_per_message = 252 # this is the max number of bytes the adafruit_rfm9x library is able to send in a message over LoRa
     bytes_per_message = 100
-    send_or_rec = 'recieve'
-    valid_modes = ['data destination node id', 'this node id', 'toggle send or recieve']
+    send_or_rec = 'receive'
+    valid_modes = ['data destination node id', 'this node id', 'toggle send or receive', 'get filelist']
     selection_mode = valid_modes[0]
     min_transmit_interval = 0
     packaged_data = {} # where we store files ready to be sent
-    collected = {}  # where we store recieved messages until we have all pieces
+    collected = {}  # where we store receive messages until we have all pieces
 
     def __init__(self, rfm9x, display, incoming, outgoing=None, fernet=None):
         self.rfm9x = rfm9x
@@ -78,7 +78,11 @@ class Transceiver():
                 self.update_display("Receive mode listening for messages...")
             else:
                 self.update_display("Send mode, sending requested file...")
-                self.send()
+                #self.send()
+        elif self.selection_mode == self.valid_modes[3]:
+            print("Doing a filelist availability update")
+            self.update_display("Sending request to recieve a list of files...")
+            rfm9x.send(bytearray([0,0,0,0]) + '000000'.encode('utf-8') + json.dumps({'a':'ls'}).encode('utf-8'))
 
 
     def request_file_metadata(self):
@@ -91,7 +95,7 @@ class Transceiver():
         
         if part == 0:
             # send all parts
-            for r in range(0,len(self.packaged_data[filehash]['data'])):
+            for r in range(1,len(self.packaged_data[filehash]['data'])+1):
                 #self.rfm9x.send_with_ack(bytes(str(index).zfill(4)) + bytes(filehash, 'utf-8') + p) # filehash is the 
                 self.send_pieces(filehash, r)
         else:
@@ -145,12 +149,8 @@ class Transceiver():
 
     def process_message(self, packet):
         """Deals with requests for information OR the collection of packets to stick them pack together when we have them all"""
-        # TODO Working HERE do the check for data
-        # Check if there's metadata
-        # We need to always know that it's a bytesarray... need to find away against no json differentiation
-        # check if request for metafdaa
-
-        # We use the first 10 bytes in the packet The first 4 are piece numbers, and the next 6 are hash
+        
+        # We use the first 10 bytes in the message. The first 4 are piece numbers, and the next 6 are hash, rest is data or metadata
         pieceid = packet[:4] # This comes in as a byte array, so put them together as an int
         pid = int(pieceid[0])*1000
         pid += int(pieceid[1])*100
@@ -168,7 +168,8 @@ class Transceiver():
         if pid == 0:
             print("A pieceid of 0 was found, which means if it's from us, this is metadata and can be interpreted as json dict")
             d = json.loads(data.decode('utf-8'))
-            # d, first element, has a key for what to do
+            # 'a' is a key for what to do
+            
             if d.get('a') == 'ls':
                 print("A list of files available was requested...")
                 # TODO add pagination?
@@ -176,6 +177,7 @@ class Transceiver():
                 filelist = json.dumps({'a':'fl', 'ls': [{'h':f, 'n':self.packaged_data[f]['n'], 'l':len(self.packaged_data[f]['data'])} for f in self.packaged_data]})
                 print(filelist)
                 self.rfm9x.send(bytearray([0,0,0,0]) + filelist.encode('utf-8'))
+            
             if d.get('a') == 'fl':
                 print("A list of files was recieved! ")
                 print("The available files are:")
@@ -186,20 +188,19 @@ class Transceiver():
 
             if d.get('a') == 'a':
                 print("One or more pieces of a specific file were requested...")
-                self.send_pieces(filehash.decode(), d.get('p', 0))
+                self.send_pieces(filehash.decode(), d.get('p', 0)) # if there is a specific piece value of p, we will only send that
         else:
             if filehash in self.collected.keys():
                 print("A filepiece was detected as part " + str(pid)  + " for file " +  filehash)
                 self.collected[filehash]['data'][pid] = data
-                print(filehash + " is now " + str(len(self.collected[filehash]['data'][pid])) + " messages long")
-                
+                print( self.collected[filehash]['filename'] + " with filehash " + filehash + " is now " + str(len(self.collected[filehash]['data'][pid])) + " messages long")
             else:
                 print("A message was detected but it doesn't appear to be for us. Skipping...")
 
 
 def main(b, btnA, btnB, btnC):
     last_press = time.time()
-    button_debounce = 0.200 # time until another press can be registered
+    button_debounce = 0.300 # time until another press can be registered
     while True:
         if b.send_or_rec == 'receive':
             # Look for a new packet: only accept if addresses to my_node
