@@ -131,7 +131,7 @@ class Transceiver():
                     print("Encrypting bytes string, size before encryption " + str(len(all_bytes)))
                     all_bytes = self.fernet.encrypt(all_bytes)
                     print("Size after encryption " + str(len(all_bytes)))
-                self.packaged_data[filehash] = {'h':fullhash}
+                self.packaged_data[filehash] = {'fh':fullhash}
 #                print(fullhash)
 #                print(all_bytes)
 #                self.packaged_data[filehash]['data'] = [123]
@@ -174,16 +174,16 @@ class Transceiver():
                 print("A list of files available was requested...")
                 # TODO add pagination?
                 # for now, return list of hashes and their filenames
-                filelist = json.dumps({'a':'fl', 'ls': [{'h':f, 'n':self.packaged_data[f]['n'], 'l':len(self.packaged_data[f]['data'])} for f in self.packaged_data]})
+                filelist = json.dumps({'a':'fl', 'ls': [{'fh':f, 'n':self.packaged_data[f]['n'], 'l':len(self.packaged_data[f]['data'])} for f in self.packaged_data]})
                 print(filelist)
-                self.rfm9x.send(bytearray([0,0,0,0]) + filelist.encode('utf-8'))
+                self.rfm9x.send(bytearray([0,0,0,0]) + bytearray([0,0,0,0,0,0]) + filelist.encode('utf-8'))
             
             if d.get('a') == 'fl':
                 print("A list of files was recieved! ")
                 print("The available files are:")
                 print(d.get('ls'))
                 for k in d.get('ls', []):
-                    self.collected[k] = {'filename':k.get('n'), 'length':k.get('l'), 'filehash':k.get('h'), 'data':{}}
+                    self.collected[k] = {'filename':k.get('n'), 'length':k.get('l'), 'fullhash':k.get('fh'), 'data':{}}
                 print(self.collected)
 
             if d.get('a') == 'a':
