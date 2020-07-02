@@ -12,7 +12,7 @@ import setupbon # offload all the bonnet-specific settings
 
 class Transceiver():
     #bytes_per_message = 252 # this is the max number of bytes the adafruit_rfm9x library is able to send in a message over LoRa
-    bytes_per_message = 100
+    bytes_per_message = 70
     send_or_rec = 'receive'
     valid_modes = ['data destination node id', 'this node id', 'toggle send or receive', 'get filelist']
     selection_mode = valid_modes[0]
@@ -89,7 +89,7 @@ class Transceiver():
 
     def request_pieces(self, filehash=None, part=None):
         print("Sending request for all pieces...")
-        rfm9x.send(bytearray([0,0,0,0]) + '4a5afe'.encode('utf-8') + json.dumps({'a':'a', 'p':1}).encode('utf-8'))
+        rfm9x.send(bytearray([0,0,0,0]) + '4a5afe'.encode('utf-8') + json.dumps({'a':'a', 'p':0}).encode('utf-8'))
 
     def send_pieces(self, filehash, part=0):
         """Sends piece(s) of the requested file"""
