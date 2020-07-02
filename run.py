@@ -108,8 +108,9 @@ class Transceiver():
             print("Sending " + filehash + " " + str(part) + " of " + str(len(self.packaged_data[filehash]['data'])))
             self.rfm9x.send_with_ack(bytes(str(part).zfill(4), 'utf-8') + bytes(filehash, 'utf-8') + self.packaged_data[filehash]['data'][int(part)-1]) # filehash is the delimiter between metadata and filedata.
     
-    def combine_pieces(self, filehash):
+    def _combine_pieces(self, filehash):
         """Puts together all the pieces in the list"""
+        print(self.collected[filehash])
         all_bytes = b''.join(self.collected[filehash]['data'])
         if self.fernet:
             all_bytes = f.decrypt(all_bytes)
@@ -154,11 +155,8 @@ class Transceiver():
         pid += int(pieceid[3])
         filehash = packet[4:10].decode() # next 6 are filehash
         data = packet[10:]
-        print("pieceid:")
-        print(pid)
-        print("filehash")
-        print(filehash)
-        print('data')
+        print("pieceid: " + str(pid))
+        print("filehash " + filehash)
         print(data)
 
         if pid == 0:
@@ -191,7 +189,7 @@ class Transceiver():
                 print( self.collected[filehash]['filename'] + " with filehash " + filehash + " is now " + str(len(self.collected[filehash]['data'].keys())) + " messages long")
                 if len(self.collected[filehash]['data']) == self.collected[filehash]['length']:
                     print("Got all pieces! Combining...")
-                    self.combine_pieces(filehash)
+                    self._combine_pieces(filehash)
             else:
                 print("A message was detected but it doesn't appear to be for us. Skipping...")
 
