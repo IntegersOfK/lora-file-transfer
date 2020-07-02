@@ -79,15 +79,17 @@ class Transceiver():
             else:
                 self.update_display("Send mode, sending requested file...")
                 #self.send()
+                print("Sending request for file")
+                self.request_pieces()
+
         elif self.selection_mode == self.valid_modes[3]:
             print("Doing a filelist availability update")
             self.update_display("Sending request to recieve a list of files...")
             rfm9x.send(bytearray([0,0,0,0]) + '000000'.encode('utf-8') + json.dumps({'a':'ls'}, separators=(',', ':'), indent=None).encode('utf-8'))
 
-
-    def request_file_metadata(self):
-        """When somebody sends a message requesting a file"""
-        pass
+    def request_pieces(self, filehash=None, part=None):
+        print("Sending request for all pieces...")
+        rfm9x.send(bytearray([0,0,0,0]) + '4a5afe'.encode('utf-8') + json.dumps({'a':'a', 'p':1}).encode('utf-8'))
 
     def send_pieces(self, filehash, part=0):
         """Sends piece(s) of the requested file"""
@@ -133,19 +135,9 @@ class Transceiver():
                     print("Size after encryption " + str(len(all_bytes)))
                 self.packaged_data[filehash] = {'h':filehash} # already have it as the key, but we can put it for ease here
                 self.packaged_data[filehash] = {'fh':fullhash} # in case we want to do a full integrity check
-#                print(fullhash)
-#                print(all_bytes)
-#                self.packaged_data[filehash]['data'] = [123]
                 self.packaged_data[filehash]['data'] = [all_bytes[i:i+self.bytes_per_message] for i in range(0, len(all_bytes), self.bytes_per_message)] # turn it into the right number of messages
                 self.packaged_data[filehash]['n'] = f
                 print(f + ' with shorthash ' + filehash  + ' is ' + str(len(all_bytes)/1024)  +' kilobytes and can be sent in ' + str(len(self.packaged_data[filehash]['data'])) + ' messages of ' + str(self.bytes_per_message) + ' bytes each')
-
-            # start_time = time.time()
-            # print('Sending metadata about the file we are about to send')
-            # metadata = [0, filehash, pathlib.Path(self.outgoing_file_path).name, len(packaged_data)] # status 0 to start, filehash, filename, number of messages to be sent
-            # encoded_metadata = bytearray(json.dumps(metadata), 'utf-8')
-            # print(encoded_metadata)
-            # #self.rfm9x.send_with_ack(encoded_metadata)
         
 
     def process_message(self, packet):
@@ -173,15 +165,14 @@ class Transceiver():
             
             if d.get('a') == 'ls':
                 print("A list of files available was requested...")
-                # TODO add pagination?
-                # for now, return list of hashes and their filenames
+                # TODO add pagination? Or at least some way to limit the number of files per message
+                # for now, return list of hashes and their filenames and assume there won't be too many for the message
                 filelist = json.dumps({'a':'fl', 'ls': [{'h':f, 'n':self.packaged_data[f]['n'], 'l':len(self.packaged_data[f]['data'])} for f in self.packaged_data]}, separators=(',', ':'), indent=None)
                 print(filelist)
-                self.rfm9x.send(bytearray([0,0,0,0]) + bytearray([0,0,0,0,0,0]) + filelist.encode('utf-8'))
+                self.rfm9x.send(bytearray([0,0,0,0]) + bytearray([0,0,0,0,0,0]) + filelist.encode('utf-8')) # we have to add that hash whitespace
             
             if d.get('a') == 'fl':
-                print("A list of files was recieved! ")
-                print("The available files are:")
+                print("A list of files was recieved! The available files are:")
                 print(d.get('ls'))
                 for k in d.get('ls', []):
                     self.collected[k.get('h')[:6]] = {'filename':k.get('n'), 'length':k.get('l'), 'hash':k.get('h'), 'data':{}}
@@ -195,6 +186,9 @@ class Transceiver():
                 print("A filepiece was detected as part " + str(pid)  + " for file " +  filehash)
                 self.collected[filehash]['data'][pid] = data
                 print( self.collected[filehash]['filename'] + " with filehash " + filehash + " is now " + str(len(self.collected[filehash]['data'][pid])) + " messages long")
+                if len(self.collected[filehash]['data']) == self.collected[filehash]['length']:
+                    print("Got all pieces! Combining...")
+                    self.combine_pieces()
             else:
                 print("A message was detected but it doesn't appear to be for us. Skipping...")
 
