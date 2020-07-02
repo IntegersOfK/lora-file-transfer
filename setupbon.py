@@ -62,7 +62,7 @@ def setup_bonnet():
 
     # enable CRC checking
     rfm9x.enable_crc = True
-    return rfm9x, display
+    return rfm9x, display, [btnA, btnB, btnC]
 
     #rfm9x.ack_wait(5.0) # increase the acknowledgement wait to 5 seconds from 0.5)
     #rfm9x.receive_timeout(5.0) # increase the recieve timeout to 5 seconds.. might not be needed and could cause issues for button detection?

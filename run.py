@@ -202,7 +202,7 @@ class Transceiver():
         #     print("Recieving packet " + str(self.message_count) + " of " +  str(self.total_messages))
         #     self.b.update_display("Recieving packet " + str(self.message_count) + " of " +  str(self.total_messages))
 
-def main(b):
+def main(b, btnA, btnB, btnC):
     last_press = time.time()
     button_debounce = 0.200 # time until another press can be registered
     while True:
@@ -255,9 +255,9 @@ if __name__ == '__main__':
         fernet = Fernet(key)
         print("Password encryption enabled")
 
-    rfm9x, display = setupbon.setup_bonnet()
+    rfm9x, display, buttons = setupbon.setup_bonnet()
     # start main loop to check for messages and button presses
-    main(Transceiver(rfm9x, display, args.incoming, args.outgoing, fernet))
+    main(Transceiver(rfm9x, display, args.incoming, args.outgoing, fernet), buttons[0], buttons[1], buttons[2])
 
     
 
