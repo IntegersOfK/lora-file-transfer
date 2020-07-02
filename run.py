@@ -24,8 +24,9 @@ class Transceiver():
         self.rfm9x = rfm9x
         self.display = display
         self.incoming_directory = incoming
-        self.outgoing_file_path = outgoing
+        self.outgoing_directory = outgoing
         self.fernet = fernet
+        self._parse_available_files() # piece the files so we're ready to send them
 
     def update_display(self, text):
         self.display.fill(0)
@@ -82,23 +83,7 @@ class Transceiver():
 
     def request_file_metadata(self):
         """When somebody sends a message requesting a file"""
-        all_bytes = pathlib.Path(self.outgoing_file_path).read_bytes() # get the file as bytes
-        # we can reasonably assume the first 6 characters are good enough to know it's the right file. Sure, small chance of collision but it will be used in every message so it needs to be short!
-        filehash = hashlib.sha256(all_bytes).hexdigest()[:6]
-        if self.fernet:
-            print("Encrypting bytes string, size before encryption " + str(len(all_bytes)))
-            all_bytes = self.fernet.encrypt(all_bytes)
-            print("Size after encryption " + str(len(all_bytes)))
-        self.packaged_data[filehash] = [bytearray(all_bytes[i:i+self.bytes_per_message], 'utf-8') for i in range(0, len(all_bytes), self.bytes_per_message)] # turn it into the right number of messages
-
-        print(str(self.outgoing_file_path) + ' is ' + str(len(all_bytes)/1024)  +' kilobytes and can be sent in ' + str(len(packaged_data)) + ' messages of ' + str(self.bytes_per_message) + ' bytes each')
-
-        start_time = time.time()
-        print('Sending metadata about the file we are about to send')
-        metadata = [0, filehash, pathlib.Path(self.outgoing_file_path).name, len(packaged_data)] # status 0 to start, filehash, filename, number of messages to be sent
-        encoded_metadata = bytearray(json.dumps(metadata), 'utf-8')
-        print(encoded_metadata)
-        self.rfm9x.send_with_ack(encoded_metadata)
+        pass
 
     def send_pieces(self, filehash, part):
         """Sends piece(s) of the requested file"""
@@ -135,7 +120,29 @@ class Transceiver():
     #         '-203', {'h':None, 'p':0}, # request specific part of a file
     #         '-301' # make and forward command functions (with pieces?)
     #         }                   
-                                
+    def _parse_available_files(self):
+        """Chunk/parse any files we might be requested to send in preperation"""
+        for f in os.listdir(self.outgoing_directory):
+            all_bytes = pathlib.Path(os.path.join(self.outgoing_directory, f)).read_bytes() # get the file as bytes
+            # we can reasonably assume the first 6 characters are good enough to know it's the right file. Sure, small chance of collision but it will be used in every message so it needs to be short!
+            fullhash = hashlib.sha256(all_bytes).hexdigest()
+            filehash = fullhash[:6]
+            if self.fernet:
+                print("Encrypting bytes string, size before encryption " + str(len(all_bytes)))
+                all_bytes = self.fernet.encrypt(all_bytes)
+                print("Size after encryption " + str(len(all_bytes)))
+            self.packaged_data[filehash] = {'h':fullhash}
+            self.packaged_data[filehash]['data'] = [bytearray(all_bytes[i:i+self.bytes_per_message], 'utf-8') for i in range(0, len(all_bytes), self.bytes_per_message)] # turn it into the right number of messages
+            self.packaged_data[filehash]['n'] = f
+            print(f + ' is ' + str(len(all_bytes)/1024)  +' kilobytes and can be sent in ' + str(len(packaged_data[filename]['data'])) + ' messages of ' + str(self.bytes_per_message) + ' bytes each')
+
+            # start_time = time.time()
+            # print('Sending metadata about the file we are about to send')
+            # metadata = [0, filehash, pathlib.Path(self.outgoing_file_path).name, len(packaged_data)] # status 0 to start, filehash, filename, number of messages to be sent
+            # encoded_metadata = bytearray(json.dumps(metadata), 'utf-8')
+            # print(encoded_metadata)
+            # #self.rfm9x.send_with_ack(encoded_metadata)
+        
 
     def process_message(self, packet):
         """Deals with requests for information OR the collection of packets to stick them pack together when we have them all"""
@@ -160,8 +167,32 @@ class Transceiver():
         print(data)
 
         if pid == 0:
-            print("Some sort of meta was requested, interpreting data as dict")
-            print(json.loads(data.decode('utf-8')))
+            print("A pieceid of 0 was found, which means this is metadata and can be interpreted as json dict")
+            d = json.loads(data.decode('utf-8'))
+            # d, first element, has a key for what to do
+            if d.get('a') == 'list':
+                print("A list of files available was requested...")
+                # TODO add pagination?
+                # for now, return list of hashes and their filenames
+                filelist = json.dumps({'a':'fl', 'f': [f + self.packaged_data[f]['n'] for f in self.packaged_data]})
+                self.rfm9x.send(bytearray(0,0,0,0) + filelist.encoded())
+            if d.get('a') == 'fl':
+                print("A list of files was recieved! ")
+                # TODO add pagination?
+                print("The available files are:")
+                print(d.get('f'))
+
+                
+
+            # if d == '1':
+            #     print("The entire file " + filehash + " has been requested. Sending now...")
+            #     send_pieces(filehash)
+                
+            
+            
+
+
+
 
         #print(piece)
         # if not self.collected.get(filehash):
