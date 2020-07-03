@@ -149,50 +149,51 @@ class Transceiver():
         """Deals with requests for information OR the collection of packets to stick them pack together when we have them all"""
         
         # We use the first 10 bytes in the message. The first 4 are piece numbers, and the next 6 are hash, rest is data or metadata
-        pieceid = packet[:4] # This comes in as a byte array, so put them together as an int
-        pid = int(pieceid[0])*1000
-        pid += int(pieceid[1])*100
-        pid += int(pieceid[2])*10
-        pid += int(pieceid[3])
-        filehash = packet[4:10].decode() # next 6 are filehash
-        data = packet[10:]
-        print("pieceid: " + str(pid))
-        print("filehash " + filehash)
-        print(data)
+        try:
+            pieceid = packet[:4] # This comes in as a byte array, so put them together as an int
+            pid = int(pieceid[0])*1000
+            pid += int(pieceid[1])*100
+            pid += int(pieceid[2])*10
+            pid += int(pieceid[3])
+            filehash = packet[4:10].decode() # next 6 are filehash
+            data = packet[10:]
+            print("pieceid: " + str(pid))
+            print("filehash " + filehash)
+            print(data)
 
-        if pid == 0:
-            print("A pieceid of 0 was found, which means if it's from us, this is metadata and can be interpreted as json dict")
-            d = json.loads(data.decode('utf-8'))
-            # 'a' is a key for what to do
-            
-            if d.get('a') == 'ls':
-                print("A list of files available was requested...")
-                # TODO add pagination? Or at least some way to limit the number of files per message
-                # for now, return list of hashes and their filenames and assume there won't be too many for the message
-                filelist = json.dumps({'a':'fl', 'ls': [{'h':f, 'n':self.packaged_data[f]['n'], 'l':len(self.packaged_data[f]['data'])} for f in self.packaged_data]}, separators=(',', ':'), indent=None)
-                print(filelist)
-                self.rfm9x.send(bytearray([0,0,0,0]) + bytearray([0,0,0,0,0,0]) + filelist.encode('utf-8')) # we have to add that hash whitespace
-            
-            if d.get('a') == 'fl':
-                print("A list of files was recieved! The available files are:")
-                print(d.get('ls'))
-                for k in d.get('ls', []):
-                    self.collected[k.get('h')[:6]] = {'filename':k.get('n'), 'length':k.get('l'), 'hash':k.get('h'), 'data':{}}
-                print(self.collected)
+            if pid == 0:
+                print("A pieceid of 0 was found, which means if it's from us, this is metadata and can be interpreted as json dict")
+                d = json.loads(data.decode('utf-8'))
+                # 'a' is a key for what to do
+                
+                if d.get('a') == 'ls':
+                    print("A list of files available was requested...")
+                    # TODO add pagination? Or at least some way to limit the number of files per message
+                    # for now, return list of hashes and their filenames and assume there won't be too many for the message
+                    filelist = json.dumps({'a':'fl', 'ls': [{'h':f, 'n':self.packaged_data[f]['n'], 'l':len(self.packaged_data[f]['data'])} for f in self.packaged_data]}, separators=(',', ':'), indent=None)
+                    print(filelist)
+                    self.rfm9x.send(bytearray([0,0,0,0]) + bytearray([0,0,0,0,0,0]) + filelist.encode('utf-8')) # we have to add that hash whitespace
+                
+                if d.get('a') == 'fl':
+                    print("A list of files was recieved! The available files are:")
+                    print(d.get('ls'))
+                    for k in d.get('ls', []):
+                        self.collected[k.get('h')[:6]] = {'filename':k.get('n'), 'length':k.get('l'), 'hash':k.get('h'), 'data':{}}
+                    print(self.collected)
 
-            if d.get('a') == 'a':
-                print("One or more pieces of a specific file were requested...")
-                self.send_pieces(filehash, d.get('p', 0)) # if there is a specific piece value of p, we will only send that
-        else:
-            if filehash in self.collected.keys():
-                print("A filepiece was detected as part " + str(pid)  + " for file " +  filehash)
-                self.collected[filehash]['data'][pid] = data
-                print( self.collected[filehash]['filename'] + " with filehash " + filehash + " is now " + str(len(self.collected[filehash]['data'].keys())) + " messages long")
-                if len(self.collected[filehash]['data']) == self.collected[filehash]['length']:
-                    print("Got all pieces! Combining...")
-                    self._combine_pieces(filehash)
+                if d.get('a') == 'a':
+                    print("One or more pieces of a specific file were requested...")
+                    self.send_pieces(filehash, d.get('p', 0)) # if there is a specific piece value of p, we will only send that
             else:
-                print("A message was detected but it doesn't appear to be for us. Skipping...")
+                if filehash in self.collected.keys():
+                    print("A filepiece was detected as part " + str(pid)  + " for file " +  filehash)
+                    self.collected[filehash]['data'][pid] = data
+                    print( self.collected[filehash]['filename'] + " with filehash " + filehash + " is now " + str(len(self.collected[filehash]['data'].keys())) + " messages long")
+                    if len(self.collected[filehash]['data']) == self.collected[filehash]['length']:
+                        print("Got all pieces! Combining...")
+                        self._combine_pieces(filehash)
+        except Exception as e:
+            print("A message was detected but it doesn't appear to be for us (or is malformed). Skipping...")
 
 
 def main(b, btnA, btnB, btnC):
