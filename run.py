@@ -159,7 +159,6 @@ class Transceiver():
             print(pid)
             pid += int(pieceid[3])
             print(pid)
-            pid = int(str(pieceid[0:4].decode()))
             filehash = packet[4:10].decode() # next 6 are filehash
             data = packet[10:]
             print("pieceid: " + str(pid))
