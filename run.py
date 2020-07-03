@@ -151,6 +151,14 @@ class Transceiver():
         # We use the first 10 bytes in the message. The first 4 are piece numbers, and the next 6 are hash, rest is data or metadata
         try:
             pieceid = packet[:4] # This comes in as a byte array, so put them together as an int
+            pid = int(pieceid[0])
+            print(pid)
+            pid += int(pieceid[1])
+            print(pid)
+            pid += int(pieceid[2])
+            print(pid)
+            pid += int(pieceid[3])
+            print(pid)
             pid = int(str(pieceid[0:4].decode()))
             filehash = packet[4:10].decode() # next 6 are filehash
             data = packet[10:]
