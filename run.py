@@ -146,7 +146,7 @@ class Transceiver():
         
 
     def process_message(self, packet):
-        """Deals with requests for information OR the collection of packets to stick them pack together when we have them all"""
+        """Deals with requests for information OR the collection of packets to stick them back together when we have them all"""
         
         # We use the first 10 bytes in the message. The first 4 are piece numbers, and the next 6 are hash, rest is data or metadata
         try:
@@ -169,7 +169,7 @@ class Transceiver():
                     # for now, return list of hashes and their filenames and assume there won't be too many for the message
                     filelist = json.dumps({'a':'fl', 'ls': [{'h':f, 'n':self.packaged_data[f]['n'], 'l':len(self.packaged_data[f]['data'])} for f in self.packaged_data]}, separators=(',', ':'), indent=None)
                     print(filelist)
-                    self.rfm9x.send(bytearray([0,0,0,0]) + bytearray([0,0,0,0,0,0]) + filelist.encode('utf-8')) # we have to add that hash whitespace
+                    self.rfm9x.send(bytearray([0,0,0,0]) + '123456'.encode() + filelist.encode('utf-8')) # we have to add that hash whitespace
                 
                 if d.get('a') == 'fl':
                     print("A list of files was recieved! The available files are:")
@@ -190,6 +190,7 @@ class Transceiver():
                         print("Got all pieces! Combining...")
                         self._combine_pieces(filehash)
         except Exception as e:
+            print(e)
             print("A message was detected but it doesn't appear to be for us (or is malformed). Skipping...")
 
 
