@@ -128,6 +128,7 @@ class Transceiver():
         with open(os.path.join(self.incoming_directory, self.collected[filehash]['filename']), "wb") as f:
             f.write(all_bytes)
         print("Done, got the file! " + os.path.join(self.incoming_directory, self.collected[filehash]['filename']))
+        self.update_display("Got full file! " + self.collected[filehash]['filename'])
        
     def _parse_available_files(self):
         """Chunk/parse any files we might be requested to send in preperation"""
