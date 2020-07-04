@@ -106,7 +106,9 @@ class Transceiver():
         else:
             # send the specific part requested
             print("Sending " + filehash + " " + str(part) + " of " + str(len(self.packaged_data[filehash]['data'])))
-            self.rfm9x.send_with_ack(bytes(str(part).zfill(4), 'utf-8') + bytes(filehash, 'utf-8') + self.packaged_data[filehash]['data'][int(part)-1]) # filehash is the delimiter between metadata and filedata.
+            byte_string = bytes(str(part).zfill(4), 'utf-8') + bytes(filehash, 'utf-8') + self.packaged_data[filehash]['data'][int(part)-1]
+            print(byte_string)
+            self.rfm9x.send_with_ack(byte_string) # filehash is the delimiter between metadata and filedata.
     
     def _combine_pieces(self, filehash):
         """Puts together all the pieces in the list"""
