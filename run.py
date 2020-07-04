@@ -16,7 +16,7 @@ class Transceiver():
     send_or_rec = 'receive'
     valid_modes = ['data destination node id', 'this node id', 'toggle send or receive', 'get filelist']
     selection_mode = valid_modes[0]
-    min_transmit_interval = 0
+    min_transmit_interval = 0.5
     packaged_data = {} # where we store files ready to be sent
     collected = {}  # where we store receive messages until we have all pieces
 
@@ -94,9 +94,11 @@ class Transceiver():
         print("Sending request for piece " + str(part))
         rfm9x.send(bytearray([0,0,0,0]) + filehash.encode('utf-8') + json.dumps({'a':'a', 'p':part}).encode('utf-8'))
     
+    last_message_time = time.time()
     def send_pieces(self, filehash, part=0):
         """Sends piece(s) of the requested file"""
-        #if self.min_transmit_interval: time.sleep(self.min_transmit_interval)
+        while self.last_message_time > time.time() - self.min_transmit_level
+            time.sleep(self.min_transmit_level)
         
         if part == 0:
             # send all parts
@@ -108,6 +110,7 @@ class Transceiver():
             print("Sending " + filehash + " " + str(part) + " of " + str(len(self.packaged_data[filehash]['data'])))
             byte_string = bytearray([int(b) for b in str(part).zfill(4)]) + filehash.encode('utf-8') + self.packaged_data[filehash]['data'][int(part)-1]
             print(byte_string)
+            self.last_message_time = time.time()
             self.rfm9x.send_with_ack(byte_string) # filehash is the delimiter between metadata and filedata.
     
     def _combine_pieces(self, filehash):
@@ -152,8 +155,9 @@ class Transceiver():
     def process_message(self, packet):
         """Deals with requests for information OR the collection of packets to stick them back together when we have them all"""
         
-        # We use the first 10 bytes in the message. The first 4 are piece numbers, and the next 6 are hash, rest is data or metadata
+        got_all_pieces = False
         try:
+            # We use the first 10 bytes in the message. The first 4 are piece numbers, and the next 6 are hash, rest is data or metadata
             pieceid = packet[0:4] # This comes in as a byte array, so put them together as an int
             print("here")
             print(pieceid)
@@ -194,12 +198,13 @@ class Transceiver():
                     self.collected[filehash]['data'][pid] = data
                     print( self.collected[filehash]['filename'] + " with filehash " + filehash + " is now " + str(len(self.collected[filehash]['data'].keys())) + " messages long")
                     if len(self.collected[filehash]['data']) == self.collected[filehash]['length']:
-                        print("Got all pieces! Combining...")
-                        self._combine_pieces(filehash)
+                        got_all_pieces = filehash
         except Exception as e:
             print(e)
             print("A message was detected but it doesn't appear to be for us (or is malformed). Skipping...")
-
+        if got_all_pieces:
+            print("Got all pieces! Combining " + got_all_pieces)
+            self._combine_pieces(got_all_pieces)
 
 def main(b, btnA, btnB, btnC):
     b.send_or_rec = 'receive'
