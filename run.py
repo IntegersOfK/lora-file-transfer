@@ -114,10 +114,12 @@ class Transceiver():
         """Puts together all the pieces in the list"""
         all_bytes = b''
         for r in range(0,len(self.collected[filehash]['data'])):
+            print(r)
             all_bytes += self.collected[filehash]['data'][r]
         if self.fernet:
             all_bytes = f.decrypt(all_bytes)
             print("Decrypted data with provided password")
+        print("Hash check...")
         this_filehash = hashlib.sha256(all_bytes).hexdigest()[:6]
         if this_filehash == filehash:
             print("File hash matches, file integrity confirmed!")
