@@ -98,7 +98,7 @@ class Transceiver():
     def send_pieces(self, filehash, parts=[0]):
         """Sends piece(s) of the requested file"""
         if parts == [0]:
-            parts = [r for r in range(1, len(self.packaged_data[filehash]['data'])+1]
+            parts = [r for r in range(1, len(self.packaged_data[filehash]['data'])+1)]
         for part in parts:
             if self.min_transmit_interval:
                 while self.last_message_time > time.time() - self.min_transmit_interval:
