@@ -82,8 +82,10 @@ class Transceiver():
                 self.update_display("Send mode, sending requested file...")
                 #self.send()
                 print("Sending request for remaining pieces for file")
-                missing_pieces = [r for r in range(1, self.collected['4a5afe']['length']) if not self.collected['4a5afe']['data'].get(r)]
-                self.request_pieces('4a5afe', missing_pieces)
+                missing_pieces = [r for r in range(1, self.collected['4a5afe']['length']) if not self.collected['4a5afe']['data'].get(str(r))]
+                if len(missing_pieces) > 35:
+                    print("There are more pieces missing that can be requested, asking for the first 35 missing...")
+                self.request_pieces('4a5afe', missing_pieces[:35])
 
         elif self.selection_mode == self.valid_modes[3]:
             print("Doing a filelist availability update")
@@ -91,7 +93,7 @@ class Transceiver():
             rfm9x.send(bytearray([0,0,0,0]) + '000000'.encode('utf-8') + json.dumps({'a':'ls'}, separators=(',', ':'), indent=None).encode('utf-8'))
 
     def request_pieces(self, filehash=None, parts=[0]):
-        print("Sending request for piece " + str(parts))
+        print("Sending request for piece(s) " + str(parts))
         rfm9x.send(bytearray([0,0,0,0]) + filehash.encode('utf-8') + json.dumps({'a':'a', 'p':parts}).encode('utf-8'))
     
     last_message_time = time.time()
@@ -220,7 +222,7 @@ def main(b, btnA, btnB, btnC):
 #                print("Received (raw header):", [hex(x) for x in packet[0:4]])
                 print("Received (raw packet): {0}".format(packet))
                 print("Received RSSI: {0}".format(rfm9x.last_rssi))
-                b.update_display("Recieving packet! Time: " + str(time.time()))
+                #b.update_display("Recieving packet! Time: " + str(time.time()))
                 print("Receiving packet! Time: " + str(time.time()))
                 b.process_message(packet)
                 packet = None
