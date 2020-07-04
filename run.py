@@ -16,7 +16,7 @@ class Transceiver():
     send_or_rec = 'receive'
     valid_modes = ['data destination node id', 'this node id', 'toggle send or receive', 'get filelist']
     selection_mode = valid_modes[0]
-    min_transmit_interval = 0.5
+    min_transmit_interval = 0
     packaged_data = {} # where we store files ready to be sent
     collected = {}  # where we store receive messages until we have all pieces
 
@@ -81,32 +81,28 @@ class Transceiver():
             else:
                 self.update_display("Send mode, sending requested file...")
                 #self.send()
-                print("Sending request for file")
-                for missing_piece in [r for r in range(1, self.collected['4a5afe']['length']) if not self.collected['4a5afe']['data'].get(r)]:
-                    self.request_pieces('4a5afe', missing_piece)
+                print("Sending request for remaining pieces for file")
+                missing_pieces = [r for r in range(1, self.collected['4a5afe']['length']) if not self.collected['4a5afe']['data'].get(r)]
+                self.request_pieces('4a5afe', missing_pieces)
 
         elif self.selection_mode == self.valid_modes[3]:
             print("Doing a filelist availability update")
             self.update_display("Sending request to recieve a list of files...")
             rfm9x.send(bytearray([0,0,0,0]) + '000000'.encode('utf-8') + json.dumps({'a':'ls'}, separators=(',', ':'), indent=None).encode('utf-8'))
 
-    def request_pieces(self, filehash=None, part=0):
-        print("Sending request for piece " + str(part))
-        rfm9x.send(bytearray([0,0,0,0]) + filehash.encode('utf-8') + json.dumps({'a':'a', 'p':part}).encode('utf-8'))
+    def request_pieces(self, filehash=None, parts=[0]):
+        print("Sending request for piece " + str(parts))
+        rfm9x.send(bytearray([0,0,0,0]) + filehash.encode('utf-8') + json.dumps({'a':'a', 'p':parts}).encode('utf-8'))
     
     last_message_time = time.time()
-    def send_pieces(self, filehash, part=0):
+    def send_pieces(self, filehash, parts=[0]):
         """Sends piece(s) of the requested file"""
-        while self.last_message_time > time.time() - self.min_transmit_interval:
-            time.sleep(self.min_transmit_interval)
-        
-        if part == 0:
-            # send all parts
-            for r in range(1,len(self.packaged_data[filehash]['data'])+1):
-                #self.rfm9x.send_with_ack(bytes(str(index).zfill(4)) + bytes(filehash, 'utf-8') + p) # filehash is the 
-                self.send_pieces(filehash, r)
-        else:
-            # send the specific part requested
+        if parts == [0]:
+            parts = [r for r in range(1, len(self.packaged_data[filehash]['data'])+1]
+        for part in parts:
+            if self.min_transmit_interval:
+                while self.last_message_time > time.time() - self.min_transmit_interval:
+                    time.sleep(self.min_transmit_interval)
             print("Sending " + filehash + " " + str(part) + " of " + str(len(self.packaged_data[filehash]['data'])))
             byte_string = bytearray([int(b) for b in str(part).zfill(4)]) + filehash.encode('utf-8') + self.packaged_data[filehash]['data'][int(part)-1]
             print(byte_string)
@@ -191,7 +187,7 @@ class Transceiver():
 
                 if d.get('a') == 'a':
                     print("One or more pieces of a specific file were requested...")
-                    self.send_pieces(filehash, d.get('p', 0)) # if there is a specific piece value of p, we will only send that
+                    self.send_pieces(filehash, d.get('p', [0])) # if there is a specific piece value of p, we will only send that
             else:
                 if filehash in self.collected.keys():
                     print("A filepiece was detected as part " + str(pid)  + " for file " +  filehash)
