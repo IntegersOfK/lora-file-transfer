@@ -97,6 +97,8 @@ class Transceiver():
     last_message_time = time.time()
     def send_pieces(self, filehash, parts=[0]):
         """Sends piece(s) of the requested file"""
+        time.sleep(1) # initial wait so the requestor can be back in listening mode
+
         if parts == [0]:
             parts = [r for r in range(1, len(self.packaged_data[filehash]['data'])+1)]
         for part in parts:
@@ -190,9 +192,10 @@ class Transceiver():
                     self.send_pieces(filehash, d.get('p', [0])) # if there is a specific piece value of p, we will only send that
             else:
                 if filehash in self.collected.keys():
-                    print("A filepiece was detected as part " + str(pid)  + " for file " +  filehash)
-                    self.collected[filehash]['data'][pid] = data
+                    #print("A filepiece was detected as part " + str(pid)  + " for file " +  filehash)
+                    self.collected[filehash]['data'][str(pid)] = data
                     print( self.collected[filehash]['filename'] + " with filehash " + filehash + " is now " + str(len(self.collected[filehash]['data'].keys())) + " messages long")
+                    self.update_display('Got ' + str(len(self.collected[filehash]['data'].keys())) + " of " + str(self.collected[filehash]['length']) + " " + self.collected[filehash]['filename'])
                     if len(self.collected[filehash]['data']) == self.collected[filehash]['length']:
                         got_all_pieces = filehash
         except Exception as e:
