@@ -196,6 +196,7 @@ class Transceiver():
                     self.collected[filehash]['data'][str(pid)] = data
                     print( self.collected[filehash]['filename'] + " with filehash " + filehash + " is now " + str(len(self.collected[filehash]['data'].keys())) + " messages long")
                     self.update_display('Got ' + str(len(self.collected[filehash]['data'].keys())) + " of " + str(self.collected[filehash]['length']) + " " + self.collected[filehash]['filename'])
+                    print(self.collected[filehash]['data'].keys())
                     if len(self.collected[filehash]['data']) == self.collected[filehash]['length']:
                         got_all_pieces = filehash
         except Exception as e:
