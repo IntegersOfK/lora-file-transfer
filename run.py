@@ -97,7 +97,7 @@ class Transceiver():
     last_message_time = time.time()
     def send_pieces(self, filehash, part=0):
         """Sends piece(s) of the requested file"""
-        while self.last_message_time > time.time() - self.min_transmit_level
+        while self.last_message_time > time.time() - self.min_transmit_level:
             time.sleep(self.min_transmit_level)
         
         if part == 0:
