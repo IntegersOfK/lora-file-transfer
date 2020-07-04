@@ -80,7 +80,6 @@ class Transceiver():
                 self.request_pieces('4a5afe')
             else:
                 self.update_display("Send mode, sending requested file...")
-                #self.send()
                 print("Sending request for remaining pieces for file")
                 missing_pieces = [r for r in range(1, self.collected['4a5afe']['length']) if not self.collected['4a5afe']['data'].get(str(r))]
                 if len(missing_pieces) > 35:
@@ -117,20 +116,18 @@ class Transceiver():
         """Puts together all the pieces in the list"""
         all_bytes = b''
         for r in range(1,len(self.collected[filehash]['data'])+1):
-            print(r)
             all_bytes += self.collected[filehash]['data'][str(r)]
         if self.fernet:
             all_bytes = f.decrypt(all_bytes)
             print("Decrypted data with provided password")
-        print("Hash check...")
         this_filehash = hashlib.sha256(all_bytes).hexdigest()[:6]
         if this_filehash == filehash:
             print("File hash matches, file integrity confirmed!")
         else:
             print("File hash doesn't match, writing to file anyway...")
-        with open(os.path.join(self.output_dir, self.collected[filehash]['filename']), "wb") as f:
+        with open(os.path.join(self.incoming_directory, self.collected[filehash]['filename']), "wb") as f:
             f.write(all_bytes)
-        print("Done, got the file! " + os.path.join(self.output_dir, self.collected[filehash]['filename']))
+        print("Done, got the file! " + os.path.join(self.incoming_directory, self.collected[filehash]['filename']))
        
     def _parse_available_files(self):
         """Chunk/parse any files we might be requested to send in preperation"""
