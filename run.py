@@ -113,9 +113,9 @@ class Transceiver():
     def _combine_pieces(self, filehash):
         """Puts together all the pieces in the list"""
         all_bytes = b''
-        for r in range(0,len(self.collected[filehash]['data'])):
+        for r in range(1,len(self.collected[filehash]['data'])+1):
             print(r)
-            all_bytes += self.collected[filehash]['data'][r]
+            all_bytes += self.collected[filehash]['data'][str(r)]
         if self.fernet:
             all_bytes = f.decrypt(all_bytes)
             print("Decrypted data with provided password")
