@@ -81,10 +81,10 @@ class Transceiver():
             else:
                 self.update_display("Send mode, sending requested file...")
                 print("Sending request for remaining pieces for file")
-                missing_pieces = [r for r in range(1, self.collected['4a5afe']['length']) if not self.collected['4a5afe']['data'].get(str(r))]
-                if len(missing_pieces) > 35:
-                    print("There are more pieces missing that can be requested, asking for the first 35 missing...")
-                self.request_pieces('4a5afe', missing_pieces[:35])
+                missing_pieces = [r for r in range(1, self.collected['4a5afe']['length']+1) if not self.collected['4a5afe']['data'].get(str(r))]
+                if len(missing_pieces) > 20:
+                    print("There are more pieces missing that can be requested, asking for the first 20 missing...")
+                self.request_pieces('4a5afe', missing_pieces[:20])
 
         elif self.selection_mode == self.valid_modes[3]:
             print("Doing a filelist availability update")
