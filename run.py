@@ -93,7 +93,7 @@ class Transceiver():
     def request_pieces(self, filehash=None, part=0):
         print("Sending request for piece " + str(part))
         rfm9x.send(bytearray([0,0,0,0]) + filehash.encode('utf-8') + json.dumps({'a':'a', 'p':part}).encode('utf-8'))
-
+    
     def send_pieces(self, filehash, part=0):
         """Sends piece(s) of the requested file"""
         #if self.min_transmit_interval: time.sleep(self.min_transmit_interval)
@@ -106,7 +106,7 @@ class Transceiver():
         else:
             # send the specific part requested
             print("Sending " + filehash + " " + str(part) + " of " + str(len(self.packaged_data[filehash]['data'])))
-            byte_string = bytes(str(part).zfill(4), 'utf-8') + bytes(filehash, 'utf-8') + self.packaged_data[filehash]['data'][int(part)-1]
+            byte_string = bytearray([int(b) for b in str(part).zfill(4)]) + filehash.encode('utf-8') + self.packaged_data[filehash]['data'][int(part)-1]
             print(byte_string)
             self.rfm9x.send_with_ack(byte_string) # filehash is the delimiter between metadata and filedata.
     
